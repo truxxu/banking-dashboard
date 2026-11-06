@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
 import { SETTLE_MS, transactionQuerySchema, transferRequestSchema, TRANSFER_FEES } from '@/api/schemas'
-import type { ApiError, Category, Paginated, Summary, Transaction } from '@/api/types'
+import type { ApiError, CashFlowPoint, Category, Paginated, Summary, Transaction } from '@/api/types'
 import { DAY_MS, dayKey } from '@/lib/date'
 import { getDb, resetDb, updateDb } from './db'
 import type { Database } from './seed'
@@ -217,30 +217,32 @@ function buildSummary(periodDays: number): Summary {
   }
   const balanceSeries: Summary['balanceSeries'] = []
   const cashFlowSeries: Summary['cashFlowSeries'] = []
-  const flowByDay = new Map<string, { inCents: number; outCents: number }>()
+  type Flow = Omit<CashFlowPoint, 'date'>
+  const emptyFlow = (): Flow => ({ inCents: 0, outCents: 0, inByCategory: {}, outByCategory: {} })
+  const flowByDay = new Map<string, Flow>()
   for (const t of inPeriod) {
     const k = dayKey(t.date)
-    const f = flowByDay.get(k) ?? { inCents: 0, outCents: 0 }
-    if (t.amountCents > 0) f.inCents += t.amountCents
-    else f.outCents -= t.amountCents
+    const f = flowByDay.get(k) ?? emptyFlow()
+    if (t.amountCents > 0) {
+      f.inCents += t.amountCents
+      f.inByCategory[t.category] = (f.inByCategory[t.category] ?? 0) + t.amountCents
+    } else {
+      f.outCents -= t.amountCents
+      f.outByCategory[t.category] = (f.outByCategory[t.category] ?? 0) - t.amountCents
+    }
     flowByDay.set(k, f)
   }
   let running = totalCashCents
   for (let i = 0; i <= periodDays; i++) {
     const k = dayKey(new Date(now - i * DAY_MS))
     balanceSeries.push({ date: k, balanceCents: running })
-    cashFlowSeries.push({ date: k, ...(flowByDay.get(k) ?? { inCents: 0, outCents: 0 }) })
+    cashFlowSeries.push({ date: k, ...(flowByDay.get(k) ?? emptyFlow()) })
     running -= netByDay.get(k) ?? 0
   }
   balanceSeries.reverse()
   cashFlowSeries.reverse()
 
   const startBalance = balanceSeries[0]?.balanceCents ?? totalCashCents
-
-  // Burn = average monthly net outflow over the trailing 90 days.
-  const last90 = external.filter((t) => new Date(t.date).getTime() >= now - 90 * DAY_MS)
-  const net90 = last90.reduce((s, t) => s + t.amountCents, 0)
-  const avgMonthlyBurnCents = net90 < 0 ? Math.round(-net90 / 3) : 0
 
   const spend = new Map<Category, number>()
   for (const t of inPeriod) {
@@ -253,8 +255,6 @@ function buildSummary(periodDays: number): Summary {
     cashChangeCents: totalCashCents - startBalance,
     moneyInCents,
     moneyOutCents,
-    avgMonthlyBurnCents,
-    runwayMonths: avgMonthlyBurnCents > 0 ? Math.round((totalCashCents / avgMonthlyBurnCents) * 10) / 10 : null,
     balanceSeries,
     cashFlowSeries,
     spendByCategory: [...spend.entries()].map(([category, cents]) => ({ category, cents })).sort((a, b) => b.cents - a.cents),

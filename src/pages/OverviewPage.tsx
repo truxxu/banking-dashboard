@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { ErrorState } from '@/components/shared/States'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
+import { CategoryFlowCard } from '@/features/overview/CategoryFlowCard'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatShortDate } from '@/lib/date'
@@ -23,6 +24,8 @@ export function OverviewPage() {
   const [params, setParams] = useSearchParams()
   const days = Number(params.get('period') ?? 30)
   const summary = useSummary(days)
+  // Money in/out cards are always the last 30 days, independent of the period switcher.
+  const summary30 = useSummary(30)
   const accounts = useAccounts()
   const recent = useTransactions({ page: 1, pageSize: 6 })
 
@@ -96,15 +99,9 @@ export function OverviewPage() {
         </Card>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Money in" value={summary.data && formatMoney(summary.data.moneyInCents)} />
-        <Metric label="Money out" value={summary.data && formatMoney(summary.data.moneyOutCents)} />
-        <Metric label="Avg. monthly burn" hint="Trailing 3 months" value={summary.data && formatMoney(summary.data.avgMonthlyBurnCents)} />
-        <Metric
-          label="Runway"
-          hint="At current burn"
-          value={summary.data && (summary.data.runwayMonths === null ? 'Cash-flow positive' : `${summary.data.runwayMonths} months`)}
-        />
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <CategoryFlowCard direction="in" summary={summary30} />
+        <CategoryFlowCard direction="out" summary={summary30} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
@@ -151,19 +148,5 @@ export function OverviewPage() {
         </Card>
       </div>
     </>
-  )
-}
-
-function Metric({ label, value, hint }: { label: string; value?: string; hint?: string }) {
-  return (
-    <Card className="gap-2 py-5">
-      <CardHeader className="px-5">
-        <CardDescription>{label}</CardDescription>
-      </CardHeader>
-      <CardContent className="px-5">
-        {value ? <div className="tabular text-xl font-semibold">{value}</div> : <Skeleton className="h-7 w-32" />}
-        {hint && <div className="text-muted-foreground mt-1 text-xs">{hint}</div>}
-      </CardContent>
-    </Card>
   )
 }

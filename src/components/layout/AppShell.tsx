@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { ArrowLeftRight, BarChart3, Home, Moon, RotateCcw, Send, Sun } from 'lucide-react'
+import { ArrowLeftRight, Home, Moon, RotateCcw, Send, Sun } from 'lucide-react'
 import { useResetDemo } from '@/api/queries'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils'
 const NAV = [
   { to: '/', label: 'Overview', icon: Home, end: true },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { to: '/insights', label: 'Insights', icon: BarChart3 },
   { to: '/payments', label: 'Send money', icon: Send },
 ]
 

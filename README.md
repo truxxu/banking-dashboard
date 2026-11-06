@@ -39,8 +39,9 @@ src/
   mocks/        seed.ts (12 months of seeded data), db.ts (localStorage persistence),
                 handlers.ts (the mock REST API), browser.ts (worker setup)
   components/   ui/ (shadcn), shared/ (Amount, StatusBadge, states), layout/AppShell
-  features/     transactions/ (table, filters-in-URL hook, date-range filter, detail drawer)
-  pages/        Overview, Transactions, Insights, Payments
+  features/     transactions/ (table, filters-in-URL hook, date-range filter, detail drawer),
+                overview/ (money in/out category bars)
+  pages/        Overview, Transactions, Payments
   lib/          money.ts (integer cents + Intl formatting), date.ts, utils.ts
 ```
 
@@ -49,7 +50,7 @@ src/
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/api/accounts` | Balances + pending holds |
-| GET | `/api/summary?days=30` | Total cash, in/out, burn, runway, balance & cash-flow series, spend by category |
+| GET | `/api/summary?days=30` | Total cash, in/out, balance series, daily cash flow with per-category in/out, spend by category |
 | GET | `/api/transactions` | `q`, `accountId`, `category`, `status`, `direction`, `from`, `to`, `page`, `pageSize` |
 | GET / PATCH | `/api/transactions/:id` | PATCH `{ memo }` |
 | GET | `/api/recipients` | Saved payees |
@@ -67,11 +68,11 @@ Requests have 250–700ms of simulated latency. Internal transfers are left out 
 
 ## Status
 
-- [x] Overview: total cash, period switcher, balance chart, burn/runway, accounts, recent activity
+- [x] Overview: total cash, period switcher, balance chart, accounts, recent activity
+- [x] Overview: money in / money out bar charts of totals by category (last 30 days, top 5 + Other; bar → filtered transactions). Replaces the separate Insights page
 - [x] Transactions: search, filters, pagination, detail panel with timeline + editable memo
 - [x] Transactions: date-range picker (presets + calendar), Sheet drawer
 - [ ] Transactions: CSV export (button is in place, not wired up), receipt download
-- [ ] Insights: category chart (click → filtered transactions), monthly cash-flow chart
 - [ ] Send money: multi-step transfer flow (API + hooks are ready, see `PaymentsPage.tsx`)
 - [ ] Tests: Vitest + Testing Library on filters/transfer form, one Playwright smoke test
 

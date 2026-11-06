@@ -68,6 +68,15 @@ export interface Paginated<T> {
   pageSize: number
 }
 
+export interface CashFlowPoint {
+  /** YYYY-MM-DD day key. */
+  date: string
+  inCents: Cents
+  outCents: Cents
+  inByCategory: Partial<Record<Category, Cents>>
+  outByCategory: Partial<Record<Category, Cents>>
+}
+
 export interface Summary {
   periodDays: number
   totalCashCents: Cents
@@ -75,14 +84,10 @@ export interface Summary {
   cashChangeCents: Cents
   moneyInCents: Cents
   moneyOutCents: Cents
-  /** Average monthly net outflow across the last 3 months (0 if net positive). */
-  avgMonthlyBurnCents: Cents
-  /** Months of runway at current burn, null if not burning. */
-  runwayMonths: number | null
   /** Daily total balance across all accounts for the period. */
   balanceSeries: { date: string; balanceCents: Cents }[]
-  /** Daily in/out totals for the period. */
-  cashFlowSeries: { date: string; inCents: Cents; outCents: Cents }[]
+  /** Daily in/out totals for the period, with per-category breakdowns (positive magnitudes). */
+  cashFlowSeries: CashFlowPoint[]
   spendByCategory: { category: Category; cents: Cents }[]
 }
 
