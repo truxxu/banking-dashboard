@@ -12,7 +12,7 @@ export const transferRequestSchema = z
     recipientId: z.string().optional(),
     toAccountId: z.string().optional(),
     amountCents: z
-      .number()
+      .number({ error: 'Enter a valid amount' })
       .int()
       .positive('Amount must be greater than $0')
       .max(1_000_000_00, 'Transfers over $1,000,000 need to be scheduled with support'),
@@ -29,6 +29,7 @@ export const transferRequestSchema = z
   })
 
 export type TransferRequest = z.input<typeof transferRequestSchema>
+export type TransferRequestOutput = z.output<typeof transferRequestSchema>
 
 const dayKeyParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().catch(undefined)
 

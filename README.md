@@ -40,7 +40,7 @@ src/
                 handlers.ts (the mock REST API), browser.ts (worker setup)
   components/   ui/ (shadcn), shared/ (Amount, StatusBadge, states), layout/AppShell
   features/     transactions/ (table, filters-in-URL hook, date-range filter, detail drawer),
-                overview/ (money in/out category bars)
+                overview/ (money in/out category bars), payments/ (send money flow)
   pages/        Overview, Transactions, Payments
   lib/          money.ts (integer cents + Intl formatting), date.ts, utils.ts
 ```
@@ -73,7 +73,7 @@ Requests have 250–700ms of simulated latency. Internal transfers are left out 
 - [x] Transactions: search, filters, pagination, detail panel with timeline + editable memo
 - [x] Transactions: date-range picker (presets + calendar), Sheet drawer
 - [ ] Transactions: CSV export (button is in place, not wired up), receipt download
-- [ ] Send money: multi-step transfer flow (API + hooks are ready, see `PaymentsPage.tsx`)
+- [x] Send money: multi-step transfer flow (from → to → amount & method → review → success), with live pending → posted status
 - [ ] Tests: Vitest + Testing Library on filters/transfer form, one Playwright smoke test
 
 ## Deploy

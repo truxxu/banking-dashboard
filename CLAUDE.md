@@ -38,6 +38,7 @@ Ledgerly is a front-end-only mock business banking dashboard (Vite 8, React 19, 
 - The date-range filter (`features/transactions/DateRangeFilter.tsx`) edits a draft and commits `from`/`to` together via `setDateRange` when the popover closes. Convert day keys with `dayKey` / `parseDayKey` (local time, never `new Date('YYYY-MM-DD')`).
 - The transaction drawer is a shadcn `Sheet` opened from table rows (no `SheetTrigger`), so it restores focus to the opening element itself.
 - Overview's Money in/out cards (`features/overview/CategoryFlowCard.tsx`) always use `useSummary(30)`, independent of the balance card's period switcher. `categoryTotals.ts` sums `cashFlowSeries[].inByCategory/outByCategory` into per-category totals (top 5 + Other), rendered as HTML horizontal bars where each bar links to the filtered transactions view.
+- Send money (`features/payments/TransferFlow.tsx`): one react-hook-form instance over `transferRequestSchema`, stepped From → To → Amount → Review, then `TransferSuccess`. Steps validate their own fields with `trigger` (zod v4 skips the object-level `.refine`s while other fields are invalid, so the destination check is done by hand). Picking a destination sets exactly one of `recipientId`/`toAccountId` and a compatible `method`. The amount input keeps raw text and writes `parseMoney(text) ?? NaN` to `amountCents`. The available-funds check (`available()` in `transfer.ts`) runs client-side before Review; the server's 422 is the backstop.
 - Shared building blocks: `components/shared/` (`Amount`, `StatusBadge`, `States` for loading/error/empty, `PageHeader`); shadcn primitives in `components/ui/`.
 - Import alias `@/` → `src/`.
 
@@ -46,7 +47,7 @@ Ledgerly is a front-end-only mock business banking dashboard (Vite 8, React 19, 
 - Date helpers (`dayKey`, `DAY_MS`) are in `lib/date.ts`; date filters compare `YYYY-MM-DD` day keys.
 
 ## Work in progress
-Per README status: Payments page (`PaymentsPage.tsx`) is a stub — its header comment describes the intended multi-step transfer flow, and the API/hooks for it already exist. On Transactions, the "Export CSV" and "Download receipt" buttons are placeholders (no-op / disabled).
+Per README status: on Transactions, the "Export CSV" and "Download receipt" buttons are placeholders (no-op / disabled).
 
 ## Deploy
 - GitHub Pages: `.github/workflows/deploy.yml` builds with `BASE_PATH=/<repo-name>/` (read by `vite.config.ts` as `base`) and copies `index.html` to `404.html` for deep links.
