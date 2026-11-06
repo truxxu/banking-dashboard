@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { ArrowLeftRight, BarChart3, CreditCard, FileText, Home, Moon, RotateCcw, Send, Settings, Sun, Users } from 'lucide-react'
+import { ArrowLeftRight, BarChart3, Home, Moon, RotateCcw, Send, Sun } from 'lucide-react'
 import { useResetDemo } from '@/api/queries'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -10,13 +10,6 @@ const NAV = [
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/insights', label: 'Insights', icon: BarChart3 },
   { to: '/payments', label: 'Send money', icon: Send },
-]
-/** Shown but disabled — makes the product feel complete without building it. */
-const COMING_SOON = [
-  { label: 'Cards', icon: CreditCard },
-  { label: 'Invoicing', icon: FileText },
-  { label: 'Team', icon: Users },
-  { label: 'Settings', icon: Settings },
 ]
 
 function useDarkMode() {
@@ -66,13 +59,6 @@ export function AppShell() {
               <Icon className="size-4" />
               {label}
             </NavLink>
-          ))}
-          <div className="text-muted-foreground mt-6 mb-1 px-2.5 text-xs font-medium">Coming soon</div>
-          {COMING_SOON.map(({ label, icon: Icon }) => (
-            <span key={label} aria-disabled className="text-muted-foreground/60 flex cursor-not-allowed items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm">
-              <Icon className="size-4" />
-              {label}
-            </span>
           ))}
         </nav>
         <div className="flex flex-col gap-2 border-t p-3">
