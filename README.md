@@ -39,7 +39,7 @@ src/
   mocks/        seed.ts (12 months of seeded data), db.ts (localStorage persistence),
                 handlers.ts (the mock REST API), browser.ts (worker setup)
   components/   ui/ (shadcn), shared/ (Amount, StatusBadge, states), layout/AppShell
-  features/     transactions/ (table, filters-in-URL hook, detail panel)
+  features/     transactions/ (table, filters-in-URL hook, date-range filter, detail drawer)
   pages/        Overview, Transactions, Insights, Payments
   lib/          money.ts (integer cents + Intl formatting), date.ts, utils.ts
 ```
@@ -69,7 +69,8 @@ Requests have 250–700ms of simulated latency. Internal transfers are left out 
 
 - [x] Overview: total cash, period switcher, balance chart, burn/runway, accounts, recent activity
 - [x] Transactions: search, filters, pagination, detail panel with timeline + editable memo
-- [ ] Transactions: date-range picker, proper Sheet drawer, CSV export
+- [x] Transactions: date-range picker (presets + calendar), Sheet drawer
+- [ ] Transactions: CSV export (button is in place, not wired up), receipt download
 - [ ] Insights: category chart (click → filtered transactions), monthly cash-flow chart
 - [ ] Send money: multi-step transfer flow (API + hooks are ready, see `PaymentsPage.tsx`)
 - [ ] Tests: Vitest + Testing Library on filters/transfer form, one Playwright smoke test

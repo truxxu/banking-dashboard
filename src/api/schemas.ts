@@ -30,15 +30,17 @@ export const transferRequestSchema = z
 
 export type TransferRequest = z.input<typeof transferRequestSchema>
 
+const dayKeyParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().catch(undefined)
+
 export const transactionQuerySchema = z.object({
   q: z.string().optional(),
   accountId: z.string().optional(),
   category: z.enum(CATEGORIES).optional(),
   status: z.enum(['pending', 'posted', 'failed']).optional(),
   direction: z.enum(['in', 'out']).optional(),
-  /** YYYY-MM-DD, inclusive. */
-  from: z.string().optional(),
-  to: z.string().optional(),
+  /** YYYY-MM-DD, inclusive. Malformed values are dropped rather than failing the whole query. */
+  from: dayKeyParam,
+  to: dayKeyParam,
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 })

@@ -33,6 +33,25 @@ export function useTransactionFilters() {
     [setParams],
   )
 
+  /** Sets both ends of the date range in one URL update (one fetch). */
+  const setDateRange = useCallback(
+    (from: string | undefined, to: string | undefined) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          for (const [key, value] of [['from', from], ['to', to]] as const) {
+            if (value) next.set(key, value)
+            else next.delete(key)
+          }
+          next.delete('page')
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setParams],
+  )
+
   const clearFilters = useCallback(() => setParams({}, { replace: true }), [setParams])
 
   const selectedId = params.get('tx')
@@ -47,7 +66,8 @@ export function useTransactionFilters() {
     [setParams],
   )
 
-  const activeCount = FILTER_KEYS.filter((k) => params.get(k)).length
+  // from/to count as a single "date" filter.
+  const activeCount = FILTER_KEYS.filter((k) => k !== 'to' && (params.get(k) || (k === 'from' && params.get('to')))).length
 
-  return { query, setFilter, clearFilters, activeCount, selectedId, setSelectedId }
+  return { query, setFilter, setDateRange, clearFilters, activeCount, selectedId, setSelectedId }
 }

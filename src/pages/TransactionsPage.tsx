@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Search } from 'lucide-react'
 import { useAccounts, useTransactions } from '@/api/queries'
 import { CATEGORIES } from '@/api/types'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -9,12 +9,13 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DateRangeFilter } from '@/features/transactions/DateRangeFilter'
 import { TransactionDetail } from '@/features/transactions/TransactionDetail'
 import { TransactionsTable } from '@/features/transactions/TransactionsTable'
 import { useTransactionFilters } from '@/features/transactions/useTransactionFilters'
 
 export function TransactionsPage() {
-  const { query, setFilter, clearFilters, activeCount, selectedId, setSelectedId } = useTransactionFilters()
+  const { query, setFilter, setDateRange, clearFilters, activeCount, selectedId, setSelectedId } = useTransactionFilters()
   const transactions = useTransactions(query)
   const accounts = useAccounts()
 
@@ -25,13 +26,26 @@ export function TransactionsPage() {
     return () => clearTimeout(t)
   }, [search, query.q, setFilter])
 
+  // Keep the last selected id so the drawer content stays put during its close animation.
+  const [shownId, setShownId] = useState(selectedId)
+  if (selectedId && selectedId !== shownId) setShownId(selectedId)
+
   const page = query.page ?? 1
   const total = transactions.data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / (query.pageSize ?? 25)))
 
   return (
     <>
-      <PageHeader title="Transactions" description={transactions.data ? `${total.toLocaleString()} transactions` : undefined} />
+      <PageHeader
+        title="Transactions"
+        description={transactions.data ? `${total.toLocaleString()} transactions` : undefined}
+        actions={
+          // TODO: export the current filtered query as CSV
+          <Button variant="outline" title="CSV export coming soon" onClick={() => {}}>
+            <Download /> Export CSV
+          </Button>
+        }
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
@@ -57,7 +71,7 @@ export function TransactionsPage() {
           <option value="posted">Posted</option>
           <option value="failed">Failed</option>
         </NativeSelect>
-        {/* TODO: date range picker (from/to are already supported by the API and URL) */}
+        <DateRangeFilter from={query.from} to={query.to} onChange={setDateRange} />
         {activeCount > 0 && (
           <Button variant="ghost" size="sm" onClick={() => { setSearch(''); clearFilters() }}>Clear filters</Button>
         )}
@@ -84,7 +98,7 @@ export function TransactionsPage() {
         </div>
       </Card>
 
-      {selectedId && <TransactionDetail id={selectedId} onClose={() => setSelectedId(null)} />}
+      <TransactionDetail id={shownId} open={!!selectedId} onClose={() => setSelectedId(null)} />
     </>
   )
 }

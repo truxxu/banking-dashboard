@@ -35,6 +35,8 @@ Ledgerly is a front-end-only mock business banking dashboard (Vite 8, React 19, 
 ### UI
 - Routes (`App.tsx`) render inside `components/layout/AppShell`: `/` Overview, `/transactions`, `/insights`, `/payments`. Router `basename` derives from `BASE_URL`.
 - **Transaction filters and the selected transaction (`?tx=`) live in the URL** via `features/transactions/useTransactionFilters.ts`; invalid params are dropped via zod; changing any filter resets `page`. Other pages link into filtered views by building these query strings.
+- The date-range filter (`features/transactions/DateRangeFilter.tsx`) edits a draft and commits `from`/`to` together via `setDateRange` when the popover closes. Convert day keys with `dayKey` / `parseDayKey` (local time, never `new Date('YYYY-MM-DD')`).
+- The transaction drawer is a shadcn `Sheet` opened from table rows (no `SheetTrigger`), so it restores focus to the opening element itself.
 - Shared building blocks: `components/shared/` (`Amount`, `StatusBadge`, `States` for loading/error/empty, `PageHeader`); shadcn primitives in `components/ui/`.
 - Import alias `@/` → `src/`.
 
@@ -43,7 +45,7 @@ Ledgerly is a front-end-only mock business banking dashboard (Vite 8, React 19, 
 - Date helpers (`dayKey`, `DAY_MS`) are in `lib/date.ts`; date filters compare `YYYY-MM-DD` day keys.
 
 ## Work in progress
-Per README status: Payments page (`PaymentsPage.tsx`) is a stub — its header comment describes the intended multi-step transfer flow, and the API/hooks for it already exist. Insights charts, transaction date-range picker, Sheet drawer, and CSV export are also unbuilt.
+Per README status: Payments page (`PaymentsPage.tsx`) is a stub — its header comment describes the intended multi-step transfer flow, and the API/hooks for it already exist. Insights charts are also unbuilt. On Transactions, the "Export CSV" and "Download receipt" buttons are placeholders (no-op / disabled).
 
 ## Deploy
 - GitHub Pages: `.github/workflows/deploy.yml` builds with `BASE_PATH=/<repo-name>/` (read by `vite.config.ts` as `base`) and copies `index.html` to `404.html` for deep links.

@@ -1,31 +1,54 @@
-import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Download } from 'lucide-react'
 import { useTransaction, useUpdateMemo } from '@/api/queries'
 import { Amount } from '@/components/shared/Amount'
 import { ErrorState } from '@/components/shared/States'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatDate } from '@/lib/date'
 
 /**
- * Minimal detail panel. TODO: turn into a proper drawer (`npx shadcn add sheet`)
- * with focus trapping, and add a "Download receipt" action.
+ * Transaction detail drawer. `id` is the transaction to show; `open` is controlled separately
+ * so the last transaction stays rendered while the close animation runs.
  */
-export function TransactionDetail({ id, onClose }: { id: string; onClose: () => void }) {
-  const tx = useTransaction(id)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
+export function TransactionDetail({ id, open, onClose }: { id: string | null; open: boolean; onClose: () => void }) {
+  // Opened from table rows rather than a SheetTrigger, so Radix has no trigger to return focus to.
+  // Remember whatever was focused when the drawer opened and restore it on close.
+  const returnFocus = useRef<HTMLElement | null>(null)
   return (
-    <aside aria-label="Transaction details" className="bg-card fixed inset-y-0 right-0 z-20 flex w-full max-w-md flex-col border-l shadow-xl">
-      <div className="flex items-center justify-between border-b px-5 py-3">
-        <h2 className="font-semibold">Transaction</h2>
-        <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose}><X /></Button>
-      </div>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent
+        side="right"
+        className="w-full gap-0 sm:max-w-md"
+        onOpenAutoFocus={() => {
+          returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        }}
+        onCloseAutoFocus={(e) => {
+          if (returnFocus.current?.isConnected) {
+            e.preventDefault()
+            returnFocus.current.focus()
+          }
+        }}
+      >
+        {id && <DetailBody id={id} />}
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function DetailBody({ id }: { id: string }) {
+  const tx = useTransaction(id)
+  return (
+    <>
+      <SheetHeader className="border-b px-5 py-4">
+        <SheetTitle>Transaction</SheetTitle>
+        <SheetDescription>
+          {tx.data ? `${tx.data.counterparty} · ${formatDate(tx.data.date)}` : 'Loading transaction details'}
+        </SheetDescription>
+      </SheetHeader>
       <div className="flex-1 overflow-y-auto p-5">
         {tx.isError && <ErrorState error={tx.error} onRetry={() => tx.refetch()} />}
         {tx.isPending && <Skeleton className="h-40" />}
@@ -58,7 +81,13 @@ export function TransactionDetail({ id, onClose }: { id: string; onClose: () => 
           </div>
         )}
       </div>
-    </aside>
+      <SheetFooter className="border-t px-5 py-3">
+        {/* TODO: generate a PDF receipt */}
+        <Button variant="outline" disabled title="Receipts coming soon">
+          <Download /> Download receipt
+        </Button>
+      </SheetFooter>
+    </>
   )
 }
 
