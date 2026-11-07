@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useSummary } from '@/api/queries'
 import { EmptyState, ErrorState } from '@/components/shared/States'
@@ -16,7 +17,7 @@ export function CategoryFlowCard({ direction, days, periodLabel }: { direction: 
   const summary = useSummary(days)
   const title = direction === 'in' ? 'Money in' : 'Money out'
   const series = summary.data?.cashFlowSeries
-  const rows = series && buildCategoryTotals(series, direction)
+  const rows = useMemo(() => series && buildCategoryTotals(series, direction), [series, direction])
   const max = rows?.reduce((m, r) => Math.max(m, r.totalCents), 0) ?? 0
 
   const from = series?.[0]?.date

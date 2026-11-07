@@ -35,7 +35,7 @@ export function RequestsList({ accounts }: { accounts: Account[] }) {
         ) : (
           <>
             {cancel.isError && <FieldError className="mx-5 mb-3 sm:mx-6" message={cancel.error.message || 'The request could not be cancelled.'} />}
-            <Table className="[&_td]:first:pl-5 [&_td]:last:pr-5 [&_th]:first:pl-5 [&_th]:last:pr-5 sm:[&_td]:first:pl-6 sm:[&_td]:last:pr-6 sm:[&_th]:first:pl-6 sm:[&_th]:last:pr-6">
+            <Table className="sm:[&_td]:first:pl-6 sm:[&_td]:last:pr-6 sm:[&_th]:first:pl-6 sm:[&_th]:last:pr-6">
               <TableHeader className="[&_tr]:border-t">
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Payer</TableHead>

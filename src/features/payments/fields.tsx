@@ -116,9 +116,9 @@ export function AmountField<T extends FieldValues, TOut>({
   const helpId = help ? `${id}-help` : undefined
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-[13px] font-medium">
+      <FieldLabel htmlFor={id}>
         Amount
-      </label>
+      </FieldLabel>
       <Controller
         name={name}
         control={control}
@@ -165,9 +165,9 @@ export function MemoField({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
-        <label htmlFor={id} className="text-[13px] font-medium">
+        <FieldLabel htmlFor={id}>
           Memo <span className="text-muted-foreground font-normal">(optional)</span>
-        </label>
+        </FieldLabel>
         <span className="tabular text-muted-foreground/80 text-xs">
           {length}/{MEMO_MAX}
         </span>
@@ -176,6 +176,11 @@ export function MemoField({
       <FieldError message={error} />
     </div>
   )
+}
+
+/** Label above a form control. */
+export function FieldLabel({ className, ...props }: React.ComponentProps<'label'>) {
+  return <label className={cn('text-[13px] font-medium', className)} {...props} />
 }
 
 export interface ReviewRow {

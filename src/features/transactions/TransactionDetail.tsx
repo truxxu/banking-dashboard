@@ -2,10 +2,12 @@ import { useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import { useAccounts, useTransaction, useUpdateMemo } from '@/api/queries'
 import { MEMO_MAX, METHOD_LABEL } from '@/api/schemas'
+import type { TransactionStatus } from '@/api/types'
 import { Amount } from '@/components/shared/Amount'
 import { CounterpartyAvatar } from '@/components/shared/CounterpartyAvatar'
 import { ErrorState } from '@/components/shared/States'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { type StatusTone, TONE_DOT } from '@/components/shared/statusTone'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -26,7 +28,7 @@ export function TransactionDetail({ id, open, onClose }: { id: string | null; op
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
         side="right"
-        className="w-full gap-0 sm:max-w-[448px]"
+        className="gap-0 sm:max-w-[448px]"
         onOpenAutoFocus={() => {
           returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
         }}
@@ -43,12 +45,8 @@ export function TransactionDetail({ id, open, onClose }: { id: string | null; op
   )
 }
 
-const TIMELINE_DOT = {
-  posted: 'bg-positive border-positive',
-  pending: 'bg-warning border-warning',
-  failed: 'bg-destructive border-destructive',
-  initiated: 'bg-card border-muted-foreground/40',
-} as const
+/** Timeline tone per status; posted reads as success here, unlike the neutral status badge. */
+const TIMELINE_TONE: Record<TransactionStatus, StatusTone> = { posted: 'positive', pending: 'warning', failed: 'destructive' }
 
 function DetailBody({ id }: { id: string }) {
   const tx = useTransaction(id)
@@ -93,7 +91,7 @@ function DetailBody({ id }: { id: string }) {
                   return (
                     <li key={i} className="flex gap-3">
                       <div aria-hidden className="flex w-2.5 flex-col items-center">
-                        <span className={cn('mt-[5px] size-2.5 shrink-0 rounded-full border-2', last ? TIMELINE_DOT[t.status] : TIMELINE_DOT.initiated)} />
+                        <span className={cn('mt-[5px] size-2.5 shrink-0 rounded-full border-2', last && t.status !== 'initiated' ? [TONE_DOT[TIMELINE_TONE[t.status]], 'border-transparent'] : 'bg-card border-muted-foreground/40')} />
                         {!last && <span className="bg-border w-[1.5px] flex-1" />}
                       </div>
                       <div className="pb-3.5 text-sm">

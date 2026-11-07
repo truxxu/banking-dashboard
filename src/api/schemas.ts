@@ -90,6 +90,9 @@ export const TRANSFER_ETA: Record<TransferRequest['method'], string> = {
   transfer: 'Instant',
 }
 
+/** Compact delivery times, e.g. for the Review summary pill. */
+export const TRANSFER_ETA_SHORT: Record<TransferRequest['method'], string> = { ach: '1–3 days', wire: 'Same day', transfer: 'Instant' }
+
 export const STATUS_LABEL: Record<TransactionStatus, string> = { pending: 'Pending', posted: 'Posted', failed: 'Failed' }
 
 export const METHOD_LABEL: Record<TransactionMethod, string> = { ach: 'ACH', wire: 'Wire', card: 'Card', transfer: 'Internal transfer' }

@@ -12,7 +12,7 @@ import { transactionsHref } from '@/features/transactions/useTransactionFilters'
 import { ACCOUNT_TYPE_LABEL } from '@/lib/account'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatShortDate, formatShortDayKey } from '@/lib/date'
+import { formatDateCompact, formatShortDayKey } from '@/lib/date'
 import { formatMoney, formatMoneyCompact } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
@@ -26,6 +26,7 @@ export function OverviewPage() {
   const [params, setParams] = useSearchParams()
   const days = Number(params.get('period') ?? 30)
   const period = PERIODS.find((p) => p.days === days)
+  const periodLong = period?.long ?? `${days} days`
   const summary = useSummary(days)
   const accounts = useAccounts()
   const recent = useTransactions({ page: 1, pageSize: 6 })
@@ -106,8 +107,8 @@ export function OverviewPage() {
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <CategoryFlowCard direction="in" days={days} periodLabel={period?.long ?? `${days} days`} />
-        <CategoryFlowCard direction="out" days={days} periodLabel={period?.long ?? `${days} days`} />
+        <CategoryFlowCard direction="in" days={days} periodLabel={periodLong} />
+        <CategoryFlowCard direction="out" days={days} periodLabel={periodLong} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
@@ -142,10 +143,10 @@ export function OverviewPage() {
               <Link key={tx.id} to={transactionsHref({ tx: tx.id })} className="hover:bg-muted/50 col-span-full -mx-2 grid grid-cols-subgrid items-center gap-x-4 rounded-md px-2 py-2.5">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{tx.counterparty}</div>
-                  <div className="text-muted-foreground text-xs">{formatShortDate(tx.date)} · {tx.category}</div>
+                  <div className="text-muted-foreground text-xs">{formatDateCompact(tx.date)} · {tx.category}</div>
                 </div>
                 <div>{tx.status !== 'posted' && <StatusBadge status={tx.status} />}</div>
-                <Amount cents={tx.amountCents} className="text-right text-sm font-medium tabular-nums" />
+                <Amount cents={tx.amountCents} className="text-right text-sm font-medium" />
               </Link>
             ))}
           </CardContent>

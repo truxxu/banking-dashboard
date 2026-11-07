@@ -4,6 +4,7 @@ import type { Account } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { NativeSelect } from '@/components/ui/native-select'
+import { FieldLabel } from '@/features/payments/fields'
 import { ACCOUNT_TYPE_LABEL, accountLabel } from '@/lib/account'
 import { cn } from '@/lib/utils'
 
@@ -32,14 +33,15 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
     }
   }
 
-  const rows: { label: string; value: string; hint?: string; display?: string; revealable?: boolean }[] = [
+  const rows: { label: string; value: string; hint?: string; display?: string; revealable?: boolean; numeric?: boolean }[] = [
     { label: 'Bank', value: BANK_NAME },
-    { label: 'Routing number', hint: 'ACH and wire', value: account.routingNumber },
+    { label: 'Routing number', hint: 'ACH and wire', value: account.routingNumber, numeric: true },
     {
       label: 'Account number',
       value: account.accountNumber,
       display: revealed ? undefined : `••••${account.mask}`,
       revealable: true,
+      numeric: true,
     },
     { label: 'Account type', value: ACCOUNT_TYPE_LABEL[account.type] },
   ]
@@ -52,9 +54,9 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <label htmlFor="details-account" className="text-[13px] font-medium">
+          <FieldLabel htmlFor="details-account">
             Account
-          </label>
+          </FieldLabel>
           <NativeSelect
             id="details-account"
             className="[&_select]:h-10"
@@ -80,7 +82,7 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
                 {r.hint && <span className="text-muted-foreground/80 block text-xs">{r.hint}</span>}
               </dt>
               <dd className="flex min-w-0 items-center gap-1">
-                <span className={cn('tabular truncate font-medium', r.label !== 'Bank' && r.label !== 'Account type' && 'tracking-[0.03em]')}>{r.display ?? r.value}</span>
+                <span className={cn('tabular truncate font-medium', r.numeric && 'tracking-[0.03em]')}>{r.display ?? r.value}</span>
                 {r.revealable && (
                   <Button
                     type="button"

@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils'
 // TanStack Table v9: features and columns are defined at module scope (stable references).
 // Filtering/pagination happen on the "server" (MSW), so only the core row model is needed.
 const features = tableFeatures({})
-const col = createColumnHelper<typeof features, Transaction & { accountLabel: string }>()
+const col = createColumnHelper<typeof features, Transaction & { accountLabel: string; dateLabel: string }>()
 const columns = col.columns([
-  col.accessor('date', { header: 'Date', cell: (c) => <span className="text-muted-foreground text-[13px]">{formatDateCompact(c.getValue())}</span> }),
+  col.accessor('date', { header: 'Date', cell: (c) => <span className="text-muted-foreground text-[13px]">{c.row.original.dateLabel}</span> }),
   col.accessor('counterparty', {
     header: 'To / From',
     cell: (c) => (
@@ -25,7 +25,7 @@ const columns = col.columns([
           <div className="truncate font-medium">{c.getValue()}</div>
           {/* Narrow cards hide the Date and Status columns, so fold them in here. */}
           <div className="text-muted-foreground flex items-center gap-1.5 text-xs leading-4 @lg:hidden">
-            <span className="shrink-0">{formatDateCompact(c.row.original.date)}</span>
+            <span className="shrink-0">{c.row.original.dateLabel}</span>
             {c.row.original.memo && <span className="truncate">· {c.row.original.memo}</span>}
           </div>
           {c.row.original.memo && <div className="text-muted-foreground truncate text-xs leading-4 @max-lg:hidden">{c.row.original.memo}</div>}
@@ -74,7 +74,7 @@ export function TransactionsTable({
 }) {
   const data = useMemo(() => {
     const byId = new Map(accounts.map((a) => [a.id, accountLabel(a)]))
-    return rows.map((r) => ({ ...r, accountLabel: byId.get(r.accountId) ?? '—' }))
+    return rows.map((r) => ({ ...r, accountLabel: byId.get(r.accountId) ?? '—', dateLabel: formatDateCompact(r.date) }))
   }, [rows, accounts])
   const table = useTable({ features, columns, data, getRowId: (r) => r.id })
 

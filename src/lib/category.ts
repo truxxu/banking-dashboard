@@ -17,6 +17,9 @@ export const CATEGORY_TINT: Record<Category, { h: number; c?: number }> = {
   Fees: { h: 0, c: 0.5 },
 }
 
+/** Tint for counterparties without a category. */
+export const NEUTRAL_TINT: { h: number; c?: number } = { h: 265, c: 0.9 }
+
 /** Up to two initials from the capitalized words of a name: "Hartmann & Rowe" → "HR". */
 export function initials(name: string) {
   return name

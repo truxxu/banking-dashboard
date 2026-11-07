@@ -1,5 +1,5 @@
 import type { Category } from '@/api/types'
-import { CATEGORY_TINT, initials } from '@/lib/category'
+import { CATEGORY_TINT, initials, NEUTRAL_TINT } from '@/lib/category'
 import { cn } from '@/lib/utils'
 
 const SIZE = {
@@ -9,7 +9,7 @@ const SIZE = {
 
 /** Rounded square with a counterparty's initials, tinted by category (or neutral). */
 export function CounterpartyAvatar({ name, category, size = 'sm', className }: { name: string; category?: Category; size?: keyof typeof SIZE; className?: string }) {
-  const tint = category ? CATEGORY_TINT[category] : { h: 265, c: 0.9 }
+  const tint = category ? CATEGORY_TINT[category] : NEUTRAL_TINT
   return (
     <span
       aria-hidden

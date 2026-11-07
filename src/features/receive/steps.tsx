@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { ACCOUNT_TYPE_LABEL, accountLabel } from '@/lib/account'
 import { formatDayKey, todayKey } from '@/lib/date'
 import { formatMoney } from '@/lib/money'
-import { AccountName, AmountField, FieldError, MemoField, MethodOption, RadioCard, ReviewList, type ReviewRow } from '@/features/payments/fields'
+import { AccountName, AmountField, FieldError, FieldLabel, MemoField, MethodOption, RadioCard, ReviewList, type ReviewRow } from '@/features/payments/fields'
 
 export type RequestForm = UseFormReturn<PaymentRequestInput, unknown, PaymentRequestOutput>
 interface StepProps {
@@ -78,9 +78,9 @@ export function PayerStep({ form, customers }: StepProps) {
       )}
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="payer-name" className="text-[13px] font-medium">
+        <FieldLabel htmlFor="payer-name">
           Payer name
-        </label>
+        </FieldLabel>
         <Input
           id="payer-name"
           autoComplete="organization"
@@ -92,9 +92,9 @@ export function PayerStep({ form, customers }: StepProps) {
         <FieldError id="payer-name-error" message={formState.errors.payerName?.message} />
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="payer-email" className="text-[13px] font-medium">
+        <FieldLabel htmlFor="payer-email">
           Email
-        </label>
+        </FieldLabel>
         <Input
           id="payer-email"
           type="email"
@@ -133,9 +133,9 @@ export function DetailsStep({ form }: StepProps) {
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="request-due" className="text-[13px] font-medium">
+        <FieldLabel htmlFor="request-due">
           Due date
-        </label>
+        </FieldLabel>
         <Input
           id="request-due"
           type="date"
@@ -172,7 +172,7 @@ export function ReviewStep({
     { label: 'Deposit to', value: to && accountLabel(to), step: 0 },
     { label: 'Payer', value: v.payerName, step: 1 },
     { label: 'Email', value: v.payerEmail, step: 1 },
-    { label: 'Amount', value: <span className="tabular">{formatMoney(v.amountCents)}</span>, step: 2, strong: true },
+    { label: 'Amount', value: formatMoney(v.amountCents), step: 2, strong: true },
     { label: 'Method', value: `${METHOD_LABEL[v.method]} · ${TRANSFER_ETA[v.method]}`, step: 2 },
     { label: 'Due', value: formatDayKey(v.dueDate), step: 2 },
     ...(v.memo ? [{ label: 'Memo', value: v.memo, step: 2 }] : []),

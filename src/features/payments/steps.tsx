@@ -1,13 +1,10 @@
 import { useWatch, type UseFormReturn } from 'react-hook-form'
-import { available, METHOD_LABEL, totalDebit, TRANSFER_ETA, TRANSFER_FEES, type TransferRequest, type TransferRequestOutput } from '@/api/schemas'
+import { available, METHOD_LABEL, totalDebit, TRANSFER_ETA, TRANSFER_ETA_SHORT, TRANSFER_FEES, type TransferRequest, type TransferRequestOutput } from '@/api/schemas'
 import type { Account, Recipient } from '@/api/types'
 import { CounterpartyAvatar } from '@/components/shared/CounterpartyAvatar'
 import { accountLabel } from '@/lib/account'
 import { formatMoney } from '@/lib/money'
 import { AccountName, AmountField, FieldError, MemoField, MethodOption, RadioCard, ReviewList, type ReviewRow } from './fields'
-
-/** Compact delivery times for the Review summary pill. */
-const TRANSFER_ETA_SHORT: Record<TransferRequest['method'], string> = { ach: '1–3 days', wire: 'Same day', transfer: 'Instant' }
 
 export type TransferForm = UseFormReturn<TransferRequest, unknown, TransferRequestOutput>
 interface StepProps {
@@ -162,11 +159,11 @@ export function ReviewStep({
       step: 1,
     },
     { label: 'Method', value: `${METHOD_LABEL[v.method]} · ${TRANSFER_ETA[v.method]}`, step: 2 },
-    { label: 'Amount', value: <span className="tabular">{formatMoney(v.amountCents)}</span>, step: 2 },
-    { label: 'Fee', value: <span className="tabular">{fee ? formatMoney(fee) : 'None'}</span> },
-    { label: 'Total debit', value: <span className="tabular">{formatMoney(total)}</span>, strong: true },
+    { label: 'Amount', value: formatMoney(v.amountCents), step: 2 },
+    { label: 'Fee', value: fee ? formatMoney(fee) : 'None' },
+    { label: 'Total debit', value: formatMoney(total), strong: true },
     ...(v.memo ? [{ label: 'Memo', value: v.memo, step: 2 }] : []),
-    ...(from ? [{ label: 'Available after', value: <span className="tabular">{formatMoney(available(from) - total)}</span> }] : []),
+    ...(from ? [{ label: 'Available after', value: formatMoney(available(from) - total) }] : []),
   ]
 
   const toName = recipient?.name ?? toAccount?.name ?? ''
