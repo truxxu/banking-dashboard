@@ -86,7 +86,7 @@ export function AmountInput({
         inputMode="decimal"
         autoComplete="off"
         placeholder="0.00"
-        className="tabular h-14 rounded-xl pl-[38px] text-[26px] font-semibold tracking-[-0.02em] placeholder:font-medium"
+        className="tabular h-14 rounded-xl pl-[38px] text-[26px] font-semibold sm:text-[26px] tracking-[-0.02em] placeholder:font-medium"
         value={text}
         aria-invalid={invalid}
         aria-describedby={invalid ? errorId : helpId}

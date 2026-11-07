@@ -49,10 +49,10 @@ export function OverviewPage() {
         <Card><ErrorState error={summary.error} onRetry={() => summary.refetch()} /></Card>
       ) : (
         <Card>
-          <CardHeader>
+          <CardHeader className="max-sm:has-data-[slot=card-action]:grid-cols-1">
             <CardDescription>Total cash</CardDescription>
             {summary.data ? (
-              <CardTitle className="tabular text-3xl font-semibold tracking-tight">{formatMoney(summary.data.totalCashCents)}</CardTitle>
+              <CardTitle className="tabular text-[28px] leading-9 font-semibold tracking-tight sm:text-3xl">{formatMoney(summary.data.totalCashCents)}</CardTitle>
             ) : (
               <Skeleton className="h-9 w-56" />
             )}
@@ -61,14 +61,14 @@ export function OverviewPage() {
                 <Amount cents={summary.data.cashChangeCents} /> in the last {PERIODS.find((p) => p.days === days)?.label ?? `${days}D`}
               </p>
             )}
-            <CardAction>
+            <CardAction className="max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-auto max-sm:mt-3 max-sm:justify-self-start">
               <div role="group" aria-label="Period" className="bg-muted flex rounded-md p-0.5">
                 {PERIODS.map((p) => (
                   <button
                     key={p.days}
                     aria-pressed={p.days === days}
                     onClick={() => setParams({ period: String(p.days) }, { replace: true })}
-                    className={cn('rounded px-2.5 py-1 text-xs font-medium', p.days === days ? 'bg-background shadow-xs' : 'text-muted-foreground')}
+                    className={cn('rounded px-2.5 py-1.5 text-xs font-medium sm:py-1', p.days === days ? 'bg-background shadow-xs' : 'text-muted-foreground')}
                   >
                     {p.label}
                   </button>
@@ -76,7 +76,7 @@ export function OverviewPage() {
               </div>
             </CardAction>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-48 sm:h-64">
             {summary.data ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={summary.data.balanceSeries} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
@@ -88,7 +88,7 @@ export function OverviewPage() {
                   </defs>
                   <CartesianGrid vertical={false} stroke="var(--border)" />
                   <XAxis dataKey="date" tickFormatter={formatShortDayKey} tickLine={false} axisLine={false} minTickGap={40} fontSize={12} stroke="var(--muted-foreground)" />
-                  <YAxis tickFormatter={(v: number) => formatMoneyCompact(v)} tickLine={false} axisLine={false} width={64} fontSize={12} stroke="var(--muted-foreground)" domain={['auto', 'auto']} />
+                  <YAxis tickFormatter={(v: number) => formatMoneyCompact(v)} tickLine={false} axisLine={false} width={56} fontSize={12} stroke="var(--muted-foreground)" domain={['auto', 'auto']} />
                   <Tooltip
                     formatter={(v) => [formatMoney(Number(v)), 'Balance']}
                     labelFormatter={(l) => formatShortDayKey(String(l))}

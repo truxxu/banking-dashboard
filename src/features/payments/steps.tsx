@@ -172,13 +172,13 @@ export function ReviewStep({
   const toName = recipient?.name ?? toAccount?.name ?? ''
   return (
     <div className="flex flex-col gap-6">
-      <div className="bg-primary/4 flex flex-wrap items-center gap-3.5 rounded-[14px] p-5">
+      <div className="bg-primary/4 grid grid-cols-[auto_1fr] items-center gap-x-3.5 gap-y-2 rounded-[14px] p-4 sm:flex sm:p-5">
         <CounterpartyAvatar name={toName} size="lg" className="bg-card text-primary shadow-ring" />
         <div className="min-w-0 flex-1">
           <div className="text-muted-foreground truncate text-[13px]">{recipient ? `Sending to ${toName}` : `Moving to ${toName}`}</div>
           <div className="tabular text-[28px] leading-[34px] font-semibold tracking-[-0.03em]">{formatMoney(total)}</div>
         </div>
-        <span className="bg-card shadow-ring text-foreground/75 rounded-full px-2.5 py-1 text-xs font-medium">
+        <span className="bg-card shadow-ring text-foreground/75 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap max-sm:col-start-2 max-sm:justify-self-start">
           {METHOD_LABEL[v.method]} · {TRANSFER_ETA_SHORT[v.method]}
         </span>
       </div>

@@ -4,7 +4,7 @@ import { EmptyState, ErrorState } from '@/components/shared/States'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { transactionsHref } from '@/features/transactions/useTransactionFilters'
-import { formatMoney } from '@/lib/money'
+import { formatMoney, formatMoneyCompact } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { buildCategoryTotals, type FlowDirection } from './categoryTotals'
 
@@ -48,14 +48,17 @@ export function CategoryFlowCard({ direction }: { direction: FlowDirection }) {
               const pct = max > 0 ? (r.totalCents / max) * 100 : 0
               const content = (
                 <>
-                  <span className="text-muted-foreground w-24 shrink-0 truncate text-sm">{r.label}</span>
+                  <span className="text-muted-foreground w-20 shrink-0 truncate text-sm sm:w-24">{r.label}</span>
                   <span aria-hidden className="min-w-0 flex-1">
                     <span
                       className={cn('block h-5 rounded-r-[4px]', r.category ? 'bg-chart-1' : 'bg-muted-foreground/50')}
                       style={{ width: `max(2px, ${pct}%)` }}
                     />
                   </span>
-                  <span className="tabular w-28 shrink-0 text-right text-sm font-medium whitespace-nowrap">{formatMoney(r.totalCents)}</span>
+                  <span className="tabular shrink-0 text-right text-sm font-medium whitespace-nowrap sm:w-28">
+                    <span className="sm:hidden">{formatMoneyCompact(r.totalCents)}</span>
+                    <span className="max-sm:hidden">{formatMoney(r.totalCents)}</span>
+                  </span>
                 </>
               )
               const cls = '-mx-2 flex items-center gap-3 rounded-md px-2 py-1'

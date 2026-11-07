@@ -55,13 +55,13 @@ function DetailBody({ id }: { id: string }) {
   const accounts = useAccounts()
   return (
     <>
-      <SheetHeader className="border-hairline gap-1 border-b px-6 py-5 pr-16">
+      <SheetHeader className="border-hairline gap-1 border-b px-5 py-5 pr-16 sm:px-6">
         <SheetTitle>Transaction</SheetTitle>
         <SheetDescription>
           {tx.data ? `${tx.data.counterparty} · ${formatDate(tx.data.date)}` : 'Loading transaction details'}
         </SheetDescription>
       </SheetHeader>
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6">
         {tx.isError && <ErrorState error={tx.error} onRetry={() => tx.refetch()} />}
         {tx.isPending && <Skeleton className="h-40" />}
         {tx.data && (
@@ -110,7 +110,7 @@ function DetailBody({ id }: { id: string }) {
           </div>
         )}
       </div>
-      <SheetFooter className="border-hairline border-t px-6 py-3.5">
+      <SheetFooter className="border-hairline border-t px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-6">
         {/* TODO: generate a PDF receipt */}
         <Button variant="outline" disabled title="Receipts coming soon">
           <Download /> Download receipt

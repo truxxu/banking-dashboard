@@ -12,7 +12,7 @@ function NativeSelect({ className, children, ...props }: React.ComponentProps<'s
     <div className={cn('relative', className)}>
       <select
         data-slot="native-select"
-        className={cn('bg-card shadow-control h-9 w-full cursor-pointer appearance-none rounded-[10px] py-1 pr-8 pl-3 text-sm outline-none', FOCUS_RING)}
+        className={cn('bg-card shadow-control h-9 w-full cursor-pointer appearance-none rounded-[10px] py-1 pr-8 pl-3 text-base outline-none sm:text-sm', FOCUS_RING)}
         {...props}
       >
         {children}

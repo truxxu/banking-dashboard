@@ -50,10 +50,11 @@ export function TransactionsPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
+        <div className="relative w-full sm:w-auto sm:min-w-56 sm:flex-1">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input aria-label="Search transactions" placeholder="Search counterparty or memo" className="h-9 pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
+        <div className="grid w-full grid-cols-2 gap-2 sm:contents">
         <NativeSelect aria-label="Account" value={query.accountId ?? ''} onChange={(e) => setFilter('accountId', e.target.value || undefined)}>
           <option value="">All accounts</option>
           {accounts.data?.map((a) => <option key={a.id} value={a.id}>{accountLabel(a)}</option>)}
@@ -71,13 +72,14 @@ export function TransactionsPage() {
           <option value="">Any status</option>
           {TRANSACTION_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </NativeSelect>
-        <DateRangeFilter from={query.from} to={query.to} onChange={setDateRange} />
+        </div>
+        <DateRangeFilter from={query.from} to={query.to} onChange={setDateRange} className="max-sm:flex-1" />
         {activeCount > 0 && (
           <Button variant="ghost" size="sm" onClick={() => { setSearch(''); clearFilters() }}>Clear filters</Button>
         )}
       </div>
 
-      <Card className="gap-0 overflow-hidden py-0">
+      <Card className="@container gap-0 overflow-hidden py-0 sm:py-0">
         {transactions.isError ? (
           <ErrorState error={transactions.error} onRetry={() => transactions.refetch()} />
         ) : transactions.isPending || accounts.isPending ? (
@@ -89,11 +91,11 @@ export function TransactionsPage() {
             <TransactionsTable rows={transactions.data.items} accounts={accounts.data ?? []} selectedId={selectedId} onSelect={setSelectedId} />
           </div>
         )}
-        <div className="border-hairline flex items-center justify-between border-t px-5 py-3 text-[13px]">
+        <div className="border-hairline flex items-center justify-between border-t px-4 py-3 text-[13px] sm:px-5">
           <span className="text-muted-foreground">Page {page} of {pageCount}</span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setFilter('page', String(page - 1))}><ChevronLeft /> Prev</Button>
-            <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => setFilter('page', String(page + 1))}>Next <ChevronRight /></Button>
+            <Button variant="outline" size="sm" disabled={page <= 1} aria-label="Previous page" onClick={() => setFilter('page', String(page - 1))}><ChevronLeft /><span className="max-sm:hidden">Prev</span></Button>
+            <Button variant="outline" size="sm" disabled={page >= pageCount} aria-label="Next page" onClick={() => setFilter('page', String(page + 1))}><span className="max-sm:hidden">Next</span><ChevronRight /></Button>
           </div>
         </div>
       </Card>

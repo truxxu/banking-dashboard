@@ -19,11 +19,16 @@ const columns = col.columns([
   col.accessor('counterparty', {
     header: 'To / From',
     cell: (c) => (
-      <div className="flex max-w-72 min-w-0 items-center gap-3">
+      <div className="flex max-w-[calc(100cqw-9rem)] min-w-0 items-center gap-3 @lg:max-w-72">
         <CounterpartyAvatar name={c.getValue()} category={c.row.original.category} />
         <div className="min-w-0">
           <div className="truncate font-medium">{c.getValue()}</div>
-          {c.row.original.memo && <div className="text-muted-foreground truncate text-xs leading-4">{c.row.original.memo}</div>}
+          {/* Narrow cards hide the Date and Status columns, so fold them in here. */}
+          <div className="text-muted-foreground flex items-center gap-1.5 text-xs leading-4 @lg:hidden">
+            <span className="shrink-0">{formatDateCompact(c.row.original.date)}</span>
+            {c.row.original.memo && <span className="truncate">· {c.row.original.memo}</span>}
+          </div>
+          {c.row.original.memo && <div className="text-muted-foreground truncate text-xs leading-4 @max-lg:hidden">{c.row.original.memo}</div>}
         </div>
       </div>
     ),
@@ -34,9 +39,27 @@ const columns = col.columns([
   col.accessor('status', { header: 'Status', cell: (c) => <StatusBadge status={c.getValue()} /> }),
   col.accessor('amountCents', {
     header: () => <span className="block text-right">Amount</span>,
-    cell: (c) => <Amount cents={c.getValue()} className={cn('block text-right font-medium', c.row.original.status === 'failed' && 'line-through opacity-60')} />,
+    cell: (c) => (
+      <div className="flex flex-col items-end gap-1">
+        <Amount cents={c.getValue()} className={cn('block text-right font-medium', c.row.original.status === 'failed' && 'line-through opacity-60')} />
+        {c.row.original.status !== 'posted' && <StatusBadge status={c.row.original.status} className="@lg:hidden" />}
+      </div>
+    ),
   }),
 ])
+
+/**
+ * Columns dropped as the table's container (the card, `@container`) narrows; the essentials
+ * (who, amount) always stay. Container queries rather than viewport breakpoints, because the
+ * sidebar appearing at `md` makes the content area narrower than the viewport suggests.
+ */
+const RESPONSIVE: Partial<Record<string, string>> = {
+  date: '@max-lg:hidden',
+  status: '@max-lg:hidden',
+  category: '@max-2xl:hidden',
+  accountLabel: '@max-4xl:hidden',
+  method: '@max-4xl:hidden',
+}
 
 export function TransactionsTable({
   rows,
@@ -61,7 +84,7 @@ export function TransactionsTable({
         {table.getHeaderGroups().map((g) => (
           <TableRow key={g.id} className="hover:bg-transparent">
             {g.headers.map((h) => (
-              <TableHead key={h.id}>{h.isPlaceholder ? null : <table.FlexRender header={h} />}</TableHead>
+              <TableHead key={h.id} className={RESPONSIVE[h.column.id]}>{h.isPlaceholder ? null : <table.FlexRender header={h} />}</TableHead>
             ))}
           </TableRow>
         ))}
@@ -77,7 +100,7 @@ export function TransactionsTable({
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(row.id))}
           >
             {row.getAllCells().map((cell) => (
-              <TableCell key={cell.id}><table.FlexRender cell={cell} /></TableCell>
+              <TableCell key={cell.id} className={RESPONSIVE[cell.column.id]}><table.FlexRender cell={cell} /></TableCell>
             ))}
           </TableRow>
         ))}
