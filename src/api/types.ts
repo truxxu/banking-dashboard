@@ -12,6 +12,10 @@ export interface Account {
   /** Funds held by pending outgoing transactions. */
   pendingCents: Cents
   currency: 'USD'
+  /** ABA routing number, shared for ACH and wires. */
+  routingNumber: string
+  /** Full account number; ends in `mask`. */
+  accountNumber: string
 }
 
 export type TransactionStatus = 'pending' | 'posted' | 'failed'
@@ -59,6 +63,33 @@ export interface Recipient {
   mask: string
   /** Methods this recipient can receive. */
   methods: Exclude<TransactionMethod, 'card' | 'transfer'>[]
+}
+
+export interface Customer {
+  id: string
+  name: string
+  email: string
+}
+
+export type PaymentRequestStatus = 'open' | 'paid' | 'cancelled'
+
+export interface PaymentRequest {
+  id: string
+  /** Account the payment will be deposited into. */
+  toAccountId: string
+  payerName: string
+  payerEmail: string
+  amountCents: Cents
+  method: 'ach' | 'wire'
+  /** YYYY-MM-DD day key. */
+  dueDate: string
+  memo: string
+  status: PaymentRequestStatus
+  /** ISO timestamp. */
+  createdAt: string
+  paidAt?: string
+  /** The incoming transaction, once the payer has paid. */
+  transactionId?: string
 }
 
 export interface Paginated<T> {

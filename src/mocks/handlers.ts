@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
-import { SETTLE_MS, transactionQuerySchema, transferRequestSchema, TRANSFER_FEES } from '@/api/schemas'
-import type { ApiError, CashFlowPoint, Category, Paginated, Summary, Transaction } from '@/api/types'
+import { paymentRequestSchema, REQUEST_PAY_MS, SETTLE_MS, transactionQuerySchema, transferRequestSchema, TRANSFER_FEES } from '@/api/schemas'
+import type { ApiError, CashFlowPoint, Category, Paginated, PaymentRequest, Summary, Transaction } from '@/api/types'
 import { DAY_MS, dayKey } from '@/lib/date'
 import { getDb, resetDb, updateDb } from './db'
 import type { Database } from './seed'
@@ -10,7 +10,7 @@ const ERROR_RATE = Number(import.meta.env.VITE_MOCK_ERROR_RATE ?? 0)
 
 async function network() {
   await delay(Math.round(250 + Math.random() * 450))
-  settleDueTransfers()
+  processScheduled()
   if (Math.random() < ERROR_RATE) {
     return error(503, 'service_unavailable', 'The bank is temporarily unavailable. Please try again.')
   }
@@ -141,11 +141,55 @@ export const handlers = [
       draft.transactions.unshift(outgoing)
       const src = draft.accounts.find((a) => a.id === from.id)!
       src.pendingCents += req.amountCents
-      // The "bank" settles it a few seconds later (see settleDueTransfers).
-      draft.scheduled.push({ txId: id, amountCents: req.amountCents, feeCents: fee, toAccountId: toAccount?.id, settleAt: Date.now() + SETTLE_MS })
+      // The "bank" settles it a few seconds later (see processScheduled).
+      draft.scheduled.push({ kind: 'transfer', txId: id, amountCents: req.amountCents, feeCents: fee, toAccountId: toAccount?.id, settleAt: Date.now() + SETTLE_MS })
     })
 
     return HttpResponse.json(outgoing, { status: 201 })
+  }),
+
+  http.get('*/api/customers', async () => {
+    const fail = await network()
+    if (fail) return fail
+    return HttpResponse.json(getDb().customers)
+  }),
+
+  http.get('*/api/payment-requests', async () => {
+    const fail = await network()
+    if (fail) return fail
+    return HttpResponse.json([...getDb().requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
+  }),
+
+  http.post('*/api/payment-requests', async ({ request }) => {
+    const fail = await network()
+    if (fail) return fail
+    const parsed = paymentRequestSchema.safeParse(await request.json())
+    if (!parsed.success) return error(400, 'invalid_request', parsed.error.issues[0]?.message ?? 'Invalid payment request')
+    const req = parsed.data
+    if (!getDb().accounts.some((a) => a.id === req.toAccountId)) return error(404, 'not_found', 'Deposit account not found')
+
+    const created: PaymentRequest = { id: `req_${crypto.randomUUID().slice(0, 10)}`, ...req, status: 'open', createdAt: new Date().toISOString() }
+    updateDb((draft) => {
+      draft.requests.unshift(created)
+      // The mock customer pays a few seconds later (see processScheduled).
+      draft.scheduled.push({ kind: 'request', requestId: created.id, settleAt: Date.now() + REQUEST_PAY_MS })
+    })
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.post('*/api/payment-requests/:id/cancel', async ({ params }) => {
+    const fail = await network()
+    if (fail) return fail
+    const existing = getDb().requests.find((r) => r.id === params.id)
+    if (!existing) return error(404, 'not_found', 'Payment request not found')
+    if (existing.status !== 'open') return error(409, 'not_open', `This request is already ${existing.status}`)
+    let updated: PaymentRequest | undefined
+    updateDb((db) => {
+      updated = db.requests.find((r) => r.id === params.id)!
+      updated.status = 'cancelled'
+      db.scheduled = db.scheduled.filter((s) => !(s.kind === 'request' && s.requestId === params.id))
+    })
+    return HttpResponse.json(updated)
   }),
 
   http.post('*/api/demo/reset', async () => {
@@ -155,14 +199,45 @@ export const handlers = [
   }),
 ]
 
-/** Posts any scheduled transfers whose settle time has passed. */
-function settleDueTransfers() {
-  const due = getDb().scheduled.filter((s) => s.settleAt <= Date.now())
+/** Runs any scheduled jobs (transfers posting, customers paying, deposits posting) whose time has passed. */
+function processScheduled() {
+  const now = Date.now()
+  const due = getDb().scheduled.filter((s) => s.settleAt <= now)
   if (due.length === 0) return
   updateDb((db) => {
-    db.scheduled = db.scheduled.filter((s) => s.settleAt > Date.now())
-    for (const s of due) settleTransfer(db, s.txId, s.amountCents, s.feeCents, s.toAccountId)
+    db.scheduled = db.scheduled.filter((s) => s.settleAt > now)
+    for (const s of due) {
+      if (s.kind === 'transfer') settleTransfer(db, s.txId, s.amountCents, s.feeCents, s.toAccountId)
+      else if (s.kind === 'request') payRequest(db, s.requestId)
+      else postDeposit(db, s.txId)
+    }
   })
+}
+
+/** The payer pays: the request is marked paid and a pending deposit appears, posting SETTLE_MS later. */
+function payRequest(db: Database, requestId: string) {
+  const req = db.requests.find((r) => r.id === requestId)
+  if (!req || req.status !== 'open') return
+  const at = new Date().toISOString()
+  const txId = `txn_${crypto.randomUUID().slice(0, 12)}`
+  db.transactions.unshift({
+    id: txId, accountId: req.toAccountId, date: at, counterparty: req.payerName, category: 'Revenue',
+    amountCents: req.amountCents, status: 'pending', method: req.method, memo: req.memo || `Payment request ${req.id}`,
+    timeline: [{ status: 'initiated', at }, { status: 'pending', at }],
+  })
+  req.status = 'paid'
+  req.paidAt = at
+  req.transactionId = txId
+  db.scheduled.push({ kind: 'deposit', txId, settleAt: Date.now() + SETTLE_MS })
+}
+
+/** Incoming funds post and credit the account. (pendingCents only tracks outgoing holds.) */
+function postDeposit(db: Database, txId: string) {
+  const tx = db.transactions.find((t) => t.id === txId)
+  if (!tx || tx.status !== 'pending') return
+  tx.status = 'posted'
+  tx.timeline.push({ status: 'posted', at: new Date().toISOString() })
+  db.accounts.find((a) => a.id === tx.accountId)!.balanceCents += tx.amountCents
 }
 
 function settleTransfer(db: Database, id: string, amountCents: number, feeCents: number, toAccountId?: string) {

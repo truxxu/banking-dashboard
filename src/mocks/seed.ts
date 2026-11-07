@@ -1,18 +1,29 @@
 import { faker } from '@faker-js/faker/locale/en'
-import type { Account, Category, Recipient, Transaction, TransactionMethod } from '@/api/types'
-import { DAY_MS } from '@/lib/date'
+import type { Account, Category, Customer, PaymentRequest, Recipient, Transaction, TransactionMethod } from '@/api/types'
+import { DAY_MS, dayKey } from '@/lib/date'
 
 export interface Database {
   version: number
   accounts: Account[]
   transactions: Transaction[]
   recipients: Recipient[]
-  /** Transfers waiting to settle; processed lazily on the next API request. */
-  scheduled: { txId: string; amountCents: number; feeCents: number; toAccountId?: string; settleAt: number }[]
+  /** Saved payers, for quick-picking on a payment request. */
+  customers: Customer[]
+  requests: PaymentRequest[]
+  /** Work the mock bank does later; processed lazily on the next API request. */
+  scheduled: ScheduledJob[]
 }
 
+export type ScheduledJob =
+  /** An outgoing transfer posts (debits the source, credits an internal destination). */
+  | { kind: 'transfer'; txId: string; amountCents: number; feeCents: number; toAccountId?: string; settleAt: number }
+  /** The payer pays an open payment request, creating a pending incoming transaction. */
+  | { kind: 'request'; requestId: string; settleAt: number }
+  /** A pending incoming transaction posts and credits its account. */
+  | { kind: 'deposit'; txId: string; settleAt: number }
+
 /** Bump when the seed shape changes so stale localStorage data is discarded. */
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 const SEED = 20261106
 const MONTHS = 12
 
@@ -42,11 +53,16 @@ function makeTx(partial: Omit<Transaction, 'id' | 'timeline' | 'memo' | 'status'
 export function createSeedDatabase(now = new Date()): Database {
   faker.seed(SEED)
 
+  const routingNumber = faker.finance.routingNumber()
+  const account = (id: string, name: string, type: Account['type'], mask: string): Account => ({
+    id, name, type, mask, balanceCents: 0, pendingCents: 0, currency: 'USD',
+    routingNumber, accountNumber: `${faker.string.numeric({ length: 8, allowLeadingZeros: false })}${mask}`,
+  })
   const accounts: Account[] = [
-    { id: 'acc_operating', name: 'Operating', type: 'checking', mask: '4821', balanceCents: 0, pendingCents: 0, currency: 'USD' },
-    { id: 'acc_payroll', name: 'Payroll', type: 'checking', mask: '7710', balanceCents: 0, pendingCents: 0, currency: 'USD' },
-    { id: 'acc_savings', name: 'Reserve', type: 'savings', mask: '3394', balanceCents: 0, pendingCents: 0, currency: 'USD' },
-    { id: 'acc_treasury', name: 'Treasury', type: 'treasury', mask: '9052', balanceCents: 0, pendingCents: 0, currency: 'USD' },
+    account('acc_operating', 'Operating', 'checking', '4821'),
+    account('acc_payroll', 'Payroll', 'checking', '7710'),
+    account('acc_savings', 'Reserve', 'savings', '3394'),
+    account('acc_treasury', 'Treasury', 'treasury', '9052'),
   ]
   const opening: Record<string, number> = {
     acc_operating: 1_150_000_00,
@@ -55,7 +71,7 @@ export function createSeedDatabase(now = new Date()): Database {
     acc_treasury: 1_600_000_00,
   }
 
-  const customers = Array.from({ length: 14 }, () => faker.company.name())
+  const customerNames = Array.from({ length: 14 }, () => faker.company.name())
   const contractors = Array.from({ length: 5 }, () => faker.person.fullName())
   VENDORS.Contractors.names = contractors
   const cardLast4 = ['1029', '5567', '8843']
@@ -81,7 +97,7 @@ export function createSeedDatabase(now = new Date()): Database {
       const n = faker.number.int({ min: 0, max: 3 })
       for (let i = 0; i < n; i++) {
         txs.push(makeTx({
-          accountId: 'acc_operating', date: at(day), counterparty: faker.helpers.arrayElement(customers),
+          accountId: 'acc_operating', date: at(day), counterparty: faker.helpers.arrayElement(customerNames),
           category: 'Revenue', amountCents: Math.round(cents(1_000_00, 12_000_00) * growth), method: faker.helpers.arrayElement(['ach', 'wire'] as const),
           memo: `Invoice INV-${faker.number.int({ min: 1000, max: 9999 })}`,
         }))
@@ -158,5 +174,35 @@ export function createSeedDatabase(now = new Date()): Database {
     { id: 'rcp_irs', name: 'IRS — EFTPS', bankName: 'U.S. Treasury', mask: '1040', methods: ['ach'] },
   ]
 
-  return { version: DB_VERSION, accounts, transactions: txs, recipients, scheduled: [] }
+  const customers: Customer[] = customerNames.map((name) => ({
+    id: `cus_${faker.string.alphanumeric(8)}`,
+    name,
+    email: `billing@${faker.internet.domainWord()}.com`,
+  }))
+  const emailFor = (name: string) => customers.find((c) => c.name === name)?.email ?? 'billing@example.com'
+
+  // Recent revenue that arrived via a payment request, so the books stay consistent.
+  const paid: PaymentRequest[] = txs
+    .filter((tx) => tx.category === 'Revenue' && tx.status === 'posted')
+    .slice(0, 4)
+    .map((tx) => {
+      const created = new Date(new Date(tx.date).getTime() - faker.number.int({ min: 3, max: 12 }) * DAY_MS)
+      return {
+        id: `req_${faker.string.alphanumeric(10)}`, toAccountId: tx.accountId, payerName: tx.counterparty, payerEmail: emailFor(tx.counterparty),
+        amountCents: tx.amountCents, method: tx.method as PaymentRequest['method'], dueDate: dayKey(new Date(created.getTime() + 14 * DAY_MS)),
+        memo: tx.memo, status: 'paid', createdAt: created.toISOString(), paidAt: tx.date, transactionId: tx.id,
+      }
+    })
+  // Outstanding requests that the mock customers haven't paid yet (they never auto-pay).
+  const open: PaymentRequest[] = faker.helpers.arrayElements(customers, 2).map((c, i) => {
+    const created = new Date(now.getTime() - (i + 2) * DAY_MS)
+    return {
+      id: `req_${faker.string.alphanumeric(10)}`, toAccountId: 'acc_operating', payerName: c.name, payerEmail: c.email,
+      amountCents: cents(2_500_00, 18_000_00), method: 'ach', dueDate: dayKey(new Date(created.getTime() + (i + 1) * 14 * DAY_MS)),
+      memo: `Invoice INV-${faker.number.int({ min: 1000, max: 9999 })}`, status: 'open', createdAt: created.toISOString(),
+    }
+  })
+  const requests = [...open, ...paid].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  return { version: DB_VERSION, accounts, transactions: txs, recipients, customers, requests, scheduled: [] }
 }

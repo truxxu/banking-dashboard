@@ -26,3 +26,9 @@ export function parseDayKey(key: string | undefined): Date | undefined {
   const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
   return dayKey(date) === key ? date : undefined // rejects e.g. 2026-02-31
 }
+
+/** Formats a YYYY-MM-DD day key for display, without the UTC shift of `new Date(key)`. */
+export function formatDayKey(key: string) {
+  const d = parseDayKey(key)
+  return d ? dateFmt.format(d) : key
+}

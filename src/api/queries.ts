@@ -1,12 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, toSearchParams } from './client'
-import { SETTLE_MS, type TransactionQuery, type TransferRequest } from './schemas'
-import type { Account, Paginated, Recipient, Summary, Transaction } from './types'
+import { REQUEST_PAY_MS, SETTLE_MS, type PaymentRequestInput, type TransactionQuery, type TransferRequest } from './schemas'
+import type { Account, Customer, Paginated, PaymentRequest, Recipient, Summary, Transaction } from './types'
 
 /** Centralised query keys so invalidation stays consistent. */
 export const qk = {
   accounts: ['accounts'] as const,
   recipients: ['recipients'] as const,
+  customers: ['customers'] as const,
+  paymentRequests: ['payment-requests'] as const,
   summary: (days: number) => ['summary', days] as const,
   transactions: (q: TransactionQuery) => ['transactions', q] as const,
   transaction: (id: string) => ['transaction', id] as const,
@@ -17,6 +19,12 @@ export const useAccounts = () =>
 
 export const useRecipients = () =>
   useQuery({ queryKey: qk.recipients, queryFn: () => api<Recipient[]>('/recipients'), staleTime: Infinity })
+
+export const useCustomers = () =>
+  useQuery({ queryKey: qk.customers, queryFn: () => api<Customer[]>('/customers'), staleTime: Infinity })
+
+export const usePaymentRequests = () =>
+  useQuery({ queryKey: qk.paymentRequests, queryFn: () => api<PaymentRequest[]>('/payment-requests') })
 
 export const useSummary = (days: number) =>
   useQuery({ queryKey: qk.summary(days), queryFn: () => api<Summary>(`/summary?days=${days}`) })
@@ -68,6 +76,29 @@ export function useCreateTransfer() {
       // Refetch again once the mock bank has settled the transfer (pending → posted).
       setTimeout(() => void invalidateLedger(qc), SETTLE_MS + 500)
     },
+  })
+}
+
+export function useCreatePaymentRequest() {
+  const qc = useQueryClient()
+  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: qk.paymentRequests }), invalidateLedger(qc)])
+  return useMutation({
+    mutationFn: (body: PaymentRequestInput) =>
+      api<PaymentRequest>('/payment-requests', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.paymentRequests })
+      // The mock customer pays (open → paid, pending deposit), then the deposit posts.
+      setTimeout(() => void refresh(), REQUEST_PAY_MS + 500)
+      setTimeout(() => void refresh(), REQUEST_PAY_MS + SETTLE_MS + 500)
+    },
+  })
+}
+
+export function useCancelPaymentRequest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api<PaymentRequest>(`/payment-requests/${id}/cancel`, { method: 'POST' }),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.paymentRequests }),
   })
 }
 

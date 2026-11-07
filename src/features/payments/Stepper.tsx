@@ -1,9 +1,9 @@
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export function Stepper({ steps, current }: { steps: string[]; current: number }) {
+export function Stepper({ steps, current, label = 'Transfer progress' }: { steps: string[]; current: number; label?: string }) {
   return (
-    <ol aria-label="Transfer progress" className="flex flex-wrap items-center gap-2 text-sm">
+    <ol aria-label={label} className="flex flex-wrap items-center gap-2 text-sm">
       {steps.map((label, i) => {
         const done = i < current
         const active = i === current

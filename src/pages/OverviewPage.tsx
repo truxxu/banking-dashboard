@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ArrowRight, Send } from 'lucide-react'
+import { ArrowRight, HandCoins, Send } from 'lucide-react'
 import { useAccounts, useSummary, useTransactions } from '@/api/queries'
 import { Amount } from '@/components/shared/Amount'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -34,9 +34,14 @@ export function OverviewPage() {
       <PageHeader
         title="Overview"
         actions={
-          <Button asChild>
-            <Link to="/payments"><Send /> Send money</Link>
-          </Button>
+          <>
+            <Button asChild variant="outline">
+              <Link to="/requests"><HandCoins /> Request payment</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/payments"><Send /> Send money</Link>
+            </Button>
+          </>
         }
       />
 

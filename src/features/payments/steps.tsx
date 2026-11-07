@@ -1,10 +1,10 @@
-import { useState } from 'react'
 import { Controller, useWatch, type UseFormReturn } from 'react-hook-form'
 import { TRANSFER_ETA, TRANSFER_FEES, type TransferRequest, type TransferRequestOutput } from '@/api/schemas'
 import type { Account, Recipient } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { formatMoney, parseMoney, type Cents } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
+import { AmountInput, FieldError, RadioCard } from './fields'
 import { available, METHOD_LABEL } from './transfer'
 
 export type TransferForm = UseFormReturn<TransferRequest, unknown, TransferRequestOutput>
@@ -12,29 +12,6 @@ interface StepProps {
   form: TransferForm
   accounts: Account[]
   recipients: Recipient[]
-}
-
-/** Integer-only cents → "1234.50" for pre-filling the amount input. */
-function centsToInput(c: Cents) {
-  return `${Math.floor(c / 100)}.${String(c % 100).padStart(2, '0')}`
-}
-
-function RadioCard({ children, ...input }: React.ComponentProps<'input'> & { children: React.ReactNode }) {
-  return (
-    <label className="hover:bg-accent/50 has-[input:checked]:border-primary has-[input:checked]:bg-accent has-[input:focus-visible]:ring-ring/50 flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-3 text-sm transition-colors has-[input:focus-visible]:ring-[3px]">
-      <input type="radio" className="sr-only" {...input} />
-      {children}
-    </label>
-  )
-}
-
-function FieldError({ id, message }: { id?: string; message?: string }) {
-  if (!message) return null
-  return (
-    <p id={id} role="alert" className="text-destructive text-sm">
-      {message}
-    </p>
-  )
 }
 
 export function FromStep({ form, accounts }: StepProps) {
@@ -121,47 +98,6 @@ export function ToStep({ form, accounts, recipients }: StepProps) {
   )
 }
 
-function AmountInput({
-  value,
-  onChange,
-  onBlur,
-  name,
-  ref,
-  invalid,
-}: {
-  value: number
-  onChange: (cents: number) => void
-  onBlur: () => void
-  name: string
-  ref: React.Ref<HTMLInputElement>
-  invalid: boolean
-}) {
-  // Keep the raw text so partial input like "12." isn't reformatted while typing.
-  const [text, setText] = useState(() => (Number.isFinite(value) ? centsToInput(value) : ''))
-  return (
-    <div className="relative">
-      <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">$</span>
-      <Input
-        id="amount"
-        ref={ref}
-        name={name}
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder="0.00"
-        className="tabular pl-7"
-        value={text}
-        aria-invalid={invalid}
-        aria-describedby={invalid ? 'amount-error' : 'amount-help'}
-        onChange={(e) => {
-          setText(e.target.value)
-          onChange(parseMoney(e.target.value) ?? NaN)
-        }}
-        onBlur={onBlur}
-      />
-    </div>
-  )
-}
-
 export function AmountStep({ form, accounts, recipients }: StepProps) {
   const { control, register, formState } = form
   const [fromId, recipientId, memo] = useWatch({ control, name: ['fromAccountId', 'recipientId', 'memo'] })
@@ -179,6 +115,9 @@ export function AmountStep({ form, accounts, recipients }: StepProps) {
           control={control}
           render={({ field, fieldState }) => (
             <AmountInput
+              id="amount"
+              errorId="amount-error"
+              helpId="amount-help"
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}

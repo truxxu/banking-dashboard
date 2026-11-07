@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { ArrowLeftRight, Home, Moon, RotateCcw, Send, Sun } from 'lucide-react'
+import { ArrowLeftRight, FileText, HandCoins, Home, Moon, RotateCcw, Send, Sun } from 'lucide-react'
 import { useResetDemo } from '@/api/queries'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,8 @@ const NAV = [
   { to: '/', label: 'Overview', icon: Home, end: true },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/payments', label: 'Send money', icon: Send },
+  { to: '/receive', label: 'Receive money', icon: HandCoins },
+  { to: '/requests', label: 'Payment requests', icon: FileText },
 ]
 
 function useDarkMode() {

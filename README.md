@@ -40,8 +40,9 @@ src/
                 handlers.ts (the mock REST API), browser.ts (worker setup)
   components/   ui/ (shadcn), shared/ (Amount, StatusBadge, states), layout/AppShell
   features/     transactions/ (table, filters-in-URL hook, date-range filter, detail drawer),
-                overview/ (money in/out category bars), payments/ (send money flow)
-  pages/        Overview, Transactions, Payments
+                overview/ (money in/out category bars), payments/ (send money flow),
+                receive/ (payment requests, account details)
+  pages/        Overview, Transactions, Payments, Receive (account details), Requests
   lib/          money.ts (integer cents + Intl formatting), date.ts, utils.ts
 ```
 
@@ -55,6 +56,9 @@ src/
 | GET / PATCH | `/api/transactions/:id` | PATCH `{ memo }` |
 | GET | `/api/recipients` | Saved payees |
 | POST | `/api/transfers` | Validates funds and the method. Creates a **pending** transaction that **posts** ~6s later (wire fee applied, internal transfers credit the destination) |
+| GET | `/api/customers` | Saved payers for payment requests |
+| GET / POST | `/api/payment-requests` | POST creates an **open** request; the mock customer pays it ~8s later, creating a pending Revenue deposit that **posts** ~6s after that |
+| POST | `/api/payment-requests/:id/cancel` | Open requests only (409 otherwise) |
 | POST | `/api/demo/reset` | Re-seed |
 
 Requests have 250–700ms of simulated latency. Internal transfers are left out of money in/out totals.
@@ -74,6 +78,7 @@ Requests have 250–700ms of simulated latency. Internal transfers are left out 
 - [x] Transactions: date-range picker (presets + calendar), Sheet drawer
 - [ ] Transactions: CSV export (button is in place, not wired up), receipt download
 - [x] Send money: multi-step transfer flow (from → to → amount & method → review → success), with live pending → posted status
+- [x] Receive money: request-payment flow (deposit to → payer → amount & terms → review → success) with live open → paid → deposited status, requests list with cancel, account/routing details with copy
 - [ ] Tests: Vitest + Testing Library on filters/transfer form, one Playwright smoke test
 
 ## Deploy
