@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ArrowRight, Send } from 'lucide-react'
+import { ArrowRight, HandCoins, Send } from 'lucide-react'
 import { useAccounts, useSummary, useTransactions } from '@/api/queries'
 import { Amount } from '@/components/shared/Amount'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -8,9 +8,11 @@ import { ErrorState } from '@/components/shared/States'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { CategoryFlowCard } from '@/features/overview/CategoryFlowCard'
+import { transactionsHref } from '@/features/transactions/useTransactionFilters'
+import { ACCOUNT_TYPE_LABEL } from '@/lib/account'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatShortDate } from '@/lib/date'
+import { formatShortDate, formatShortDayKey } from '@/lib/date'
 import { formatMoney, formatMoneyCompact } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
@@ -24,8 +26,6 @@ export function OverviewPage() {
   const [params, setParams] = useSearchParams()
   const days = Number(params.get('period') ?? 30)
   const summary = useSummary(days)
-  // Money in/out cards are always the last 30 days, independent of the period switcher.
-  const summary30 = useSummary(30)
   const accounts = useAccounts()
   const recent = useTransactions({ page: 1, pageSize: 6 })
 
@@ -34,9 +34,14 @@ export function OverviewPage() {
       <PageHeader
         title="Overview"
         actions={
-          <Button asChild>
-            <Link to="/payments"><Send /> Send money</Link>
-          </Button>
+          <>
+            <Button asChild variant="outline">
+              <Link to="/requests"><HandCoins /> Request payment</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/payments"><Send /> Send money</Link>
+            </Button>
+          </>
         }
       />
 
@@ -82,11 +87,11 @@ export function OverviewPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="date" tickFormatter={formatShortDate} tickLine={false} axisLine={false} minTickGap={40} fontSize={12} stroke="var(--muted-foreground)" />
+                  <XAxis dataKey="date" tickFormatter={formatShortDayKey} tickLine={false} axisLine={false} minTickGap={40} fontSize={12} stroke="var(--muted-foreground)" />
                   <YAxis tickFormatter={(v: number) => formatMoneyCompact(v)} tickLine={false} axisLine={false} width={64} fontSize={12} stroke="var(--muted-foreground)" domain={['auto', 'auto']} />
                   <Tooltip
                     formatter={(v) => [formatMoney(Number(v)), 'Balance']}
-                    labelFormatter={(l) => formatShortDate(String(l))}
+                    labelFormatter={(l) => formatShortDayKey(String(l))}
                     contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
                   />
                   <Area type="monotone" dataKey="balanceCents" stroke="var(--chart-1)" strokeWidth={2} fill="url(#balanceFill)" />
@@ -100,8 +105,8 @@ export function OverviewPage() {
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <CategoryFlowCard direction="in" summary={summary30} />
-        <CategoryFlowCard direction="out" summary={summary30} />
+        <CategoryFlowCard direction="in" />
+        <CategoryFlowCard direction="out" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
@@ -111,10 +116,10 @@ export function OverviewPage() {
             {accounts.isError && <ErrorState error={accounts.error} onRetry={() => accounts.refetch()} />}
             {accounts.isPending && Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="my-2 h-10" />)}
             {accounts.data?.map((a) => (
-              <Link key={a.id} to={`/transactions?accountId=${a.id}`} className="hover:bg-muted/50 -mx-2 flex items-center justify-between rounded-md px-2 py-3">
+              <Link key={a.id} to={transactionsHref({ accountId: a.id })} className="hover:bg-muted/50 -mx-2 flex items-center justify-between rounded-md px-2 py-3">
                 <div>
                   <div className="text-sm font-medium">{a.name} <span className="text-muted-foreground font-normal">••{a.mask}</span></div>
-                  <div className="text-muted-foreground text-xs capitalize">{a.type}{a.pendingCents > 0 && ` · ${formatMoney(a.pendingCents)} pending`}</div>
+                  <div className="text-muted-foreground text-xs">{ACCOUNT_TYPE_LABEL[a.type]}{a.pendingCents > 0 && ` · ${formatMoney(a.pendingCents)} pending`}</div>
                 </div>
                 <span className="tabular text-sm font-medium">{formatMoney(a.balanceCents)}</span>
               </Link>
@@ -133,7 +138,7 @@ export function OverviewPage() {
             {recent.isError && <ErrorState error={recent.error} onRetry={() => recent.refetch()} />}
             {recent.isPending && Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="my-2 h-8" />)}
             {recent.data?.items.map((tx) => (
-              <Link key={tx.id} to={`/transactions?tx=${tx.id}`} className="hover:bg-muted/50 -mx-2 flex items-center justify-between gap-4 rounded-md px-2 py-2.5">
+              <Link key={tx.id} to={transactionsHref({ tx: tx.id })} className="hover:bg-muted/50 -mx-2 flex items-center justify-between gap-4 rounded-md px-2 py-2.5">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{tx.counterparty}</div>
                   <div className="text-muted-foreground text-xs">{formatShortDate(tx.date)} · {tx.category}</div>

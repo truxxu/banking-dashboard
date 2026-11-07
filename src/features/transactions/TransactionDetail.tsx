@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import { useTransaction, useUpdateMemo } from '@/api/queries'
+import { MEMO_MAX, METHOD_LABEL } from '@/api/schemas'
 import { Amount } from '@/components/shared/Amount'
 import { ErrorState } from '@/components/shared/States'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatDate } from '@/lib/date'
+import { formatDate, formatDateTime } from '@/lib/date'
 
 /**
  * Transaction detail drawer. `id` is the transaction to show; `open` is controlled separately
@@ -62,7 +63,7 @@ function DetailBody({ id }: { id: string }) {
             </div>
             <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Category</dt><dd>{tx.data.category}</dd>
-              <dt className="text-muted-foreground">Method</dt><dd className="uppercase">{tx.data.method}</dd>
+              <dt className="text-muted-foreground">Method</dt><dd>{METHOD_LABEL[tx.data.method]}</dd>
               {tx.data.cardLast4 && (<><dt className="text-muted-foreground">Card</dt><dd>••{tx.data.cardLast4}</dd></>)}
               <dt className="text-muted-foreground">ID</dt><dd className="font-mono text-xs">{tx.data.id}</dd>
             </dl>
@@ -71,7 +72,7 @@ function DetailBody({ id }: { id: string }) {
               <ol className="border-l pl-4 text-sm">
                 {tx.data.timeline.map((t, i) => (
                   <li key={i} className="mb-2 capitalize">
-                    {t.status} <span className="text-muted-foreground normal-case">· {new Date(t.at).toLocaleString()}</span>
+                    {t.status} <span className="text-muted-foreground normal-case">· {formatDateTime(t.at)}</span>
                   </li>
                 ))}
               </ol>
@@ -103,7 +104,7 @@ function MemoForm({ id, saved }: { id: string; saved: string }) {
       className="flex flex-col gap-2"
     >
       <label htmlFor="memo" className="text-sm font-medium">Memo</label>
-      <Input id="memo" value={memo} maxLength={140} onChange={(e) => setMemo(e.target.value)} placeholder="Add a note" />
+      <Input id="memo" value={memo} maxLength={MEMO_MAX} onChange={(e) => setMemo(e.target.value)} placeholder="Add a note" />
       <div className="flex items-center gap-3">
         <Button type="submit" size="sm" disabled={updateMemo.isPending || memo === saved}>
           {updateMemo.isPending ? 'Saving…' : 'Save memo'}

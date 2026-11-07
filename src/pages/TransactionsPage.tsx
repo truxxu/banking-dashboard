@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Download, Search } from 'lucide-react'
 import { useAccounts, useTransactions } from '@/api/queries'
-import { CATEGORIES } from '@/api/types'
+import { STATUS_LABEL } from '@/api/schemas'
+import { CATEGORIES, TRANSACTION_STATUSES } from '@/api/types'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState, ErrorState } from '@/components/shared/States'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { DateRangeFilter } from '@/features/transactions/DateRangeFilter'
 import { TransactionDetail } from '@/features/transactions/TransactionDetail'
 import { TransactionsTable } from '@/features/transactions/TransactionsTable'
 import { useTransactionFilters } from '@/features/transactions/useTransactionFilters'
+import { accountLabel } from '@/lib/account'
 
 export function TransactionsPage() {
   const { query, setFilter, setDateRange, clearFilters, activeCount, selectedId, setSelectedId } = useTransactionFilters()
@@ -54,7 +56,7 @@ export function TransactionsPage() {
         </div>
         <NativeSelect aria-label="Account" value={query.accountId ?? ''} onChange={(e) => setFilter('accountId', e.target.value || undefined)}>
           <option value="">All accounts</option>
-          {accounts.data?.map((a) => <option key={a.id} value={a.id}>{a.name} ••{a.mask}</option>)}
+          {accounts.data?.map((a) => <option key={a.id} value={a.id}>{accountLabel(a)}</option>)}
         </NativeSelect>
         <NativeSelect aria-label="Category" value={query.category ?? ''} onChange={(e) => setFilter('category', e.target.value || undefined)}>
           <option value="">All categories</option>
@@ -67,9 +69,7 @@ export function TransactionsPage() {
         </NativeSelect>
         <NativeSelect aria-label="Status" value={query.status ?? ''} onChange={(e) => setFilter('status', e.target.value || undefined)}>
           <option value="">Any status</option>
-          <option value="pending">Pending</option>
-          <option value="posted">Posted</option>
-          <option value="failed">Failed</option>
+          {TRANSACTION_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </NativeSelect>
         <DateRangeFilter from={query.from} to={query.to} onChange={setDateRange} />
         {activeCount > 0 && (

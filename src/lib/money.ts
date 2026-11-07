@@ -30,3 +30,8 @@ export function parseMoney(input: string): Cents | null {
   const [whole, frac = ''] = cleaned.split('.')
   return Number(whole) * 100 + Number(frac.padEnd(2, '0'))
 }
+
+/** Integer-only cents → "1234.50" for pre-filling an amount input. */
+export function centsToInput(c: Cents) {
+  return `${Math.floor(c / 100)}.${String(c % 100).padStart(2, '0')}`
+}

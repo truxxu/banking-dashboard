@@ -1,32 +1,21 @@
 import { faker } from '@faker-js/faker/locale/en'
-import type { Account, Category, Recipient, Transaction, TransactionMethod } from '@/api/types'
-import { DAY_MS } from '@/lib/date'
+import type { Account, Customer, PaymentRequest, Recipient, Transaction } from '@/api/types'
+import { DAY_MS, dayKey } from '@/lib/date'
+import { DB_VERSION, type Database, type ScheduledJob } from './types'
 
-export interface Database {
-  version: number
-  accounts: Account[]
-  transactions: Transaction[]
-  recipients: Recipient[]
-  /** Transfers waiting to settle; processed lazily on the next API request. */
-  scheduled: { txId: string; amountCents: number; feeCents: number; toAccountId?: string; settleAt: number }[]
-}
-
-/** Bump when the seed shape changes so stale localStorage data is discarded. */
-export const DB_VERSION = 1
 const SEED = 20261106
 const MONTHS = 12
 
-const VENDORS: Record<Exclude<Category, 'Revenue' | 'Transfer' | 'Interest' | 'Fees'>, { names: string[]; range: [number, number]; method: TransactionMethod }> = {
-  Payroll: { names: ['Gusto Payroll'], range: [0, 0], method: 'ach' },
-  Rent: { names: ['WeWork'], range: [0, 0], method: 'ach' },
-  Software: { names: ['AWS', 'Google Workspace', 'GitHub', 'Figma', 'Linear', 'Notion', 'Vercel', 'Datadog'], range: [40_00, 4_800_00], method: 'card' },
-  Advertising: { names: ['Google Ads', 'Meta Ads', 'LinkedIn Ads'], range: [500_00, 9_000_00], method: 'card' },
-  Travel: { names: ['Delta Air Lines', 'United Airlines', 'Airbnb', 'Uber', 'Marriott'], range: [25_00, 2_400_00], method: 'card' },
-  Meals: { names: ['Sweetgreen', 'DoorDash', 'Blue Bottle Coffee', 'Starbucks'], range: [8_00, 320_00], method: 'card' },
-  Contractors: { names: [], range: [2_000_00, 14_000_00], method: 'ach' },
-  Taxes: { names: ['IRS — EFTPS', 'CA Franchise Tax Board'], range: [3_000_00, 22_000_00], method: 'ach' },
-  Office: { names: ['Amazon Business', 'Staples', 'Apple Store'], range: [30_00, 3_500_00], method: 'card' },
+/** Vendors for the randomly generated spend; payroll, rent and contractors are generated separately. */
+const VENDORS: Record<'Software' | 'Advertising' | 'Travel' | 'Meals' | 'Office' | 'Taxes', { names: string[]; range: [number, number] }> = {
+  Software: { names: ['AWS', 'Google Workspace', 'GitHub', 'Figma', 'Linear', 'Notion', 'Vercel', 'Datadog'], range: [40_00, 4_800_00] },
+  Advertising: { names: ['Google Ads', 'Meta Ads', 'LinkedIn Ads'], range: [500_00, 9_000_00] },
+  Travel: { names: ['Delta Air Lines', 'United Airlines', 'Airbnb', 'Uber', 'Marriott'], range: [25_00, 2_400_00] },
+  Meals: { names: ['Sweetgreen', 'DoorDash', 'Blue Bottle Coffee', 'Starbucks'], range: [8_00, 320_00] },
+  Office: { names: ['Amazon Business', 'Staples', 'Apple Store'], range: [30_00, 3_500_00] },
+  Taxes: { names: ['IRS — EFTPS', 'CA Franchise Tax Board'], range: [3_000_00, 22_000_00] },
 }
+const CONTRACTOR_RANGE: [number, number] = [2_000_00, 14_000_00]
 
 const cents = (min: number, max: number) => faker.number.int({ min, max })
 
@@ -42,11 +31,16 @@ function makeTx(partial: Omit<Transaction, 'id' | 'timeline' | 'memo' | 'status'
 export function createSeedDatabase(now = new Date()): Database {
   faker.seed(SEED)
 
+  const routingNumber = faker.finance.routingNumber()
+  const account = (id: string, name: string, type: Account['type'], mask: string): Account => ({
+    id, name, type, mask, balanceCents: 0, pendingCents: 0, currency: 'USD',
+    routingNumber, accountNumber: `${faker.string.numeric({ length: 8, allowLeadingZeros: false })}${mask}`,
+  })
   const accounts: Account[] = [
-    { id: 'acc_operating', name: 'Operating', type: 'checking', mask: '4821', balanceCents: 0, pendingCents: 0, currency: 'USD' },
-    { id: 'acc_payroll', name: 'Payroll', type: 'checking', mask: '7710', balanceCents: 0, pendingCents: 0, currency: 'USD' },
-    { id: 'acc_savings', name: 'Reserve', type: 'savings', mask: '3394', balanceCents: 0, pendingCents: 0, currency: 'USD' },
-    { id: 'acc_treasury', name: 'Treasury', type: 'treasury', mask: '9052', balanceCents: 0, pendingCents: 0, currency: 'USD' },
+    account('acc_operating', 'Operating', 'checking', '4821'),
+    account('acc_payroll', 'Payroll', 'checking', '7710'),
+    account('acc_savings', 'Reserve', 'savings', '3394'),
+    account('acc_treasury', 'Treasury', 'treasury', '9052'),
   ]
   const opening: Record<string, number> = {
     acc_operating: 1_150_000_00,
@@ -55,9 +49,8 @@ export function createSeedDatabase(now = new Date()): Database {
     acc_treasury: 1_600_000_00,
   }
 
-  const customers = Array.from({ length: 14 }, () => faker.company.name())
+  const customerNames = Array.from({ length: 14 }, () => faker.company.name())
   const contractors = Array.from({ length: 5 }, () => faker.person.fullName())
-  VENDORS.Contractors.names = contractors
   const cardLast4 = ['1029', '5567', '8843']
 
   const txs: Transaction[] = []
@@ -81,7 +74,7 @@ export function createSeedDatabase(now = new Date()): Database {
       const n = faker.number.int({ min: 0, max: 3 })
       for (let i = 0; i < n; i++) {
         txs.push(makeTx({
-          accountId: 'acc_operating', date: at(day), counterparty: faker.helpers.arrayElement(customers),
+          accountId: 'acc_operating', date: at(day), counterparty: faker.helpers.arrayElement(customerNames),
           category: 'Revenue', amountCents: Math.round(cents(1_000_00, 12_000_00) * growth), method: faker.helpers.arrayElement(['ach', 'wire'] as const),
           memo: `Invoice INV-${faker.number.int({ min: 1000, max: 9999 })}`,
         }))
@@ -112,13 +105,13 @@ export function createSeedDatabase(now = new Date()): Database {
     // Quarterly estimated taxes
     if (dom === 15 && [0, 3, 5, 8].includes(day.getMonth())) {
       const v = VENDORS.Taxes
-      txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: v.names[0], category: 'Taxes', amountCents: -cents(...v.range), method: v.method }))
+      txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: v.names[0], category: 'Taxes', amountCents: -cents(...v.range), method: 'ach' }))
     }
 
     // Contractors: monthly on the 5th
     if (dom === 5) {
       for (const name of faker.helpers.arrayElements(contractors, { min: 2, max: 4 })) {
-        txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: name, category: 'Contractors', amountCents: -cents(...VENDORS.Contractors.range), method: 'ach', memo: 'Monthly retainer' }))
+        txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: name, category: 'Contractors', amountCents: -cents(...CONTRACTOR_RANGE), method: 'ach', memo: 'Monthly retainer' }))
       }
     }
 
@@ -136,11 +129,17 @@ export function createSeedDatabase(now = new Date()): Database {
     }
   }
 
-  // Anything in the last 2 days that is still "settling" becomes pending.
+  // Anything in the last 2 days that is still "settling" becomes pending, with a job that posts it
+  // 2 days after its date. Internal transfers stay posted so both legs always agree.
+  const scheduled: ScheduledJob[] = []
   for (const tx of txs) {
-    if (now.getTime() - new Date(tx.date).getTime() < 2 * DAY_MS && tx.status === 'posted' && faker.datatype.boolean(0.5)) {
+    if (now.getTime() - new Date(tx.date).getTime() < 2 * DAY_MS && tx.status === 'posted' && tx.category !== 'Transfer' && faker.datatype.boolean(0.5)) {
       tx.status = 'pending'
       tx.timeline = tx.timeline.slice(0, 1).concat({ status: 'pending', at: tx.date })
+      const settleAt = new Date(tx.date).getTime() + 2 * DAY_MS
+      scheduled.push(tx.amountCents < 0
+        ? { kind: 'transfer', txId: tx.id, amountCents: -tx.amountCents, feeCents: 0, settleAt }
+        : { kind: 'deposit', txId: tx.id, settleAt })
     }
   }
 
@@ -158,5 +157,35 @@ export function createSeedDatabase(now = new Date()): Database {
     { id: 'rcp_irs', name: 'IRS — EFTPS', bankName: 'U.S. Treasury', mask: '1040', methods: ['ach'] },
   ]
 
-  return { version: DB_VERSION, accounts, transactions: txs, recipients, scheduled: [] }
+  const customers: Customer[] = customerNames.map((name) => ({
+    id: `cus_${faker.string.alphanumeric(8)}`,
+    name,
+    email: `billing@${faker.internet.domainWord()}.com`,
+  }))
+  const emailFor = (name: string) => customers.find((c) => c.name === name)?.email ?? 'billing@example.com'
+
+  // Recent revenue that arrived via a payment request, so the books stay consistent.
+  const paid: PaymentRequest[] = txs
+    .filter((tx) => tx.category === 'Revenue' && tx.status === 'posted')
+    .slice(0, 4)
+    .map((tx) => {
+      const created = new Date(new Date(tx.date).getTime() - faker.number.int({ min: 3, max: 12 }) * DAY_MS)
+      return {
+        id: `req_${faker.string.alphanumeric(10)}`, toAccountId: tx.accountId, payerName: tx.counterparty, payerEmail: emailFor(tx.counterparty),
+        amountCents: tx.amountCents, method: tx.method as PaymentRequest['method'], dueDate: dayKey(new Date(created.getTime() + 14 * DAY_MS)),
+        memo: tx.memo, status: 'paid', createdAt: created.toISOString(), paidAt: tx.date, transactionId: tx.id,
+      }
+    })
+  // Outstanding requests that the mock customers haven't paid yet (they never auto-pay).
+  const open: PaymentRequest[] = faker.helpers.arrayElements(customers, 2).map((c, i) => {
+    const created = new Date(now.getTime() - (i + 2) * DAY_MS)
+    return {
+      id: `req_${faker.string.alphanumeric(10)}`, toAccountId: 'acc_operating', payerName: c.name, payerEmail: c.email,
+      amountCents: cents(2_500_00, 18_000_00), method: 'ach', dueDate: dayKey(new Date(created.getTime() + (i + 1) * 14 * DAY_MS)),
+      memo: `Invoice INV-${faker.number.int({ min: 1000, max: 9999 })}`, status: 'open', createdAt: created.toISOString(),
+    }
+  })
+  const requests = [...open, ...paid].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  return { version: DB_VERSION, accounts, transactions: txs, recipients, customers, requests, scheduled }
 }

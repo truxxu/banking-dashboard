@@ -12,9 +12,14 @@ export interface Account {
   /** Funds held by pending outgoing transactions. */
   pendingCents: Cents
   currency: 'USD'
+  /** ABA routing number, shared for ACH and wires. */
+  routingNumber: string
+  /** Full account number; ends in `mask`. */
+  accountNumber: string
 }
 
-export type TransactionStatus = 'pending' | 'posted' | 'failed'
+export const TRANSACTION_STATUSES = ['pending', 'posted', 'failed'] as const
+export type TransactionStatus = (typeof TRANSACTION_STATUSES)[number]
 export type TransactionMethod = 'ach' | 'wire' | 'card' | 'transfer'
 
 export const CATEGORIES = [
@@ -61,6 +66,33 @@ export interface Recipient {
   methods: Exclude<TransactionMethod, 'card' | 'transfer'>[]
 }
 
+export interface Customer {
+  id: string
+  name: string
+  email: string
+}
+
+export type PaymentRequestStatus = 'open' | 'paid' | 'cancelled'
+
+export interface PaymentRequest {
+  id: string
+  /** Account the payment will be deposited into. */
+  toAccountId: string
+  payerName: string
+  payerEmail: string
+  amountCents: Cents
+  method: 'ach' | 'wire'
+  /** YYYY-MM-DD day key. */
+  dueDate: string
+  memo: string
+  status: PaymentRequestStatus
+  /** ISO timestamp. */
+  createdAt: string
+  paidAt?: string
+  /** The incoming transaction, once the payer has paid. */
+  transactionId?: string
+}
+
 export interface Paginated<T> {
   items: T[]
   total: number
@@ -71,14 +103,11 @@ export interface Paginated<T> {
 export interface CashFlowPoint {
   /** YYYY-MM-DD day key. */
   date: string
-  inCents: Cents
-  outCents: Cents
   inByCategory: Partial<Record<Category, Cents>>
   outByCategory: Partial<Record<Category, Cents>>
 }
 
 export interface Summary {
-  periodDays: number
   totalCashCents: Cents
   /** Change in total cash over the period. */
   cashChangeCents: Cents
@@ -88,7 +117,6 @@ export interface Summary {
   balanceSeries: { date: string; balanceCents: Cents }[]
   /** Daily in/out totals for the period, with per-category breakdowns (positive magnitudes). */
   cashFlowSeries: CashFlowPoint[]
-  spendByCategory: { category: Category; cents: Cents }[]
 }
 
 export interface ApiError {
