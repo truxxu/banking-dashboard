@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { NativeSelect } from '@/components/ui/native-select'
 import { ACCOUNT_TYPE_LABEL, accountLabel } from '@/lib/account'
+import { cn } from '@/lib/utils'
 
 const BANK_NAME = 'Ledgerly Bank, N.A.'
 
@@ -49,13 +50,14 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
         <CardTitle>Account details</CardTitle>
         <CardDescription>Share these so customers can pay you by ACH or wire.</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="details-account" className="text-sm font-medium">
+      <CardContent className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="details-account" className="text-[13px] font-medium">
             Account
           </label>
           <NativeSelect
             id="details-account"
+            className="[&_select]:h-10"
             value={account.id}
             onChange={(e) => {
               setAccountId(e.target.value)
@@ -70,21 +72,21 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
           </NativeSelect>
         </div>
 
-        <dl className="divide-y rounded-lg border text-sm">
+        <dl className="shadow-ring divide-hairline divide-y rounded-xl text-sm">
           {rows.map((r) => (
-            <div key={r.label} className="flex items-center justify-between gap-3 px-3 py-2">
+            <div key={r.label} className="flex items-center justify-between gap-3 px-4 py-3">
               <dt className="text-muted-foreground shrink-0">
                 {r.label}
-                {r.hint && <span className="block text-xs">{r.hint}</span>}
+                {r.hint && <span className="text-muted-foreground/80 block text-xs">{r.hint}</span>}
               </dt>
               <dd className="flex min-w-0 items-center gap-1">
-                <span className="tabular truncate font-medium">{r.display ?? r.value}</span>
+                <span className={cn('tabular truncate font-medium', r.label !== 'Bank' && r.label !== 'Account type' && 'tracking-[0.03em]')}>{r.display ?? r.value}</span>
                 {r.revealable && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="size-7"
+                    className="text-muted-foreground size-7"
                     aria-label={revealed ? 'Hide account number' : 'Show account number'}
                     aria-pressed={revealed}
                     onClick={() => setRevealed(!revealed)}
@@ -96,11 +98,11 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-7"
+                  className={cn('text-muted-foreground size-7', copied === r.label && 'bg-positive/10 text-positive hover:bg-positive/15 hover:text-positive')}
                   aria-label={`Copy ${r.label.toLowerCase()}`}
                   onClick={() => void copy(r.label, r.value)}
                 >
-                  {copied === r.label ? <Check className="text-positive" /> : <Copy />}
+                  {copied === r.label ? <Check /> : <Copy />}
                 </Button>
               </dd>
             </div>

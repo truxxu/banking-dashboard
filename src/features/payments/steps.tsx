@@ -1,9 +1,13 @@
 import { useWatch, type UseFormReturn } from 'react-hook-form'
 import { available, METHOD_LABEL, totalDebit, TRANSFER_ETA, TRANSFER_FEES, type TransferRequest, type TransferRequestOutput } from '@/api/schemas'
 import type { Account, Recipient } from '@/api/types'
+import { CounterpartyAvatar } from '@/components/shared/CounterpartyAvatar'
 import { accountLabel } from '@/lib/account'
 import { formatMoney } from '@/lib/money'
 import { AccountName, AmountField, FieldError, MemoField, MethodOption, RadioCard, ReviewList, type ReviewRow } from './fields'
+
+/** Compact delivery times for the Review summary pill. */
+const TRANSFER_ETA_SHORT: Record<TransferRequest['method'], string> = { ach: '1–3 days', wire: 'Same day', transfer: 'Instant' }
 
 export type TransferForm = UseFormReturn<TransferRequest, unknown, TransferRequestOutput>
 interface StepProps {
@@ -109,7 +113,7 @@ export function AmountStep({ form, accounts, recipients }: StepProps) {
 
       {recipient ? (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1.5 text-sm font-medium">Method</legend>
+          <legend className="mb-2 text-[13px] font-medium">Method</legend>
           {recipient.methods.map((m) => (
             <RadioCard key={m} {...register('method')} value={m}>
               <MethodOption method={m} />
@@ -120,7 +124,7 @@ export function AmountStep({ form, accounts, recipients }: StepProps) {
           ))}
         </fieldset>
       ) : (
-        <p className="text-muted-foreground rounded-lg border p-3 text-sm">
+        <p className="text-muted-foreground shadow-ring rounded-xl px-4 py-3.5 text-sm">
           Internal transfer · {TRANSFER_ETA.transfer} · no fee
         </p>
       )}
@@ -165,5 +169,20 @@ export function ReviewStep({
     ...(from ? [{ label: 'Available after', value: <span className="tabular">{formatMoney(available(from) - total)}</span> }] : []),
   ]
 
-  return <ReviewList rows={rows} onEdit={onEdit} error={error} fallback="The transfer could not be sent." />
+  const toName = recipient?.name ?? toAccount?.name ?? ''
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="bg-primary/4 flex flex-wrap items-center gap-3.5 rounded-[14px] p-5">
+        <CounterpartyAvatar name={toName} size="lg" className="bg-card text-primary shadow-ring" />
+        <div className="min-w-0 flex-1">
+          <div className="text-muted-foreground truncate text-[13px]">{recipient ? `Sending to ${toName}` : `Moving to ${toName}`}</div>
+          <div className="tabular text-[28px] leading-[34px] font-semibold tracking-[-0.03em]">{formatMoney(total)}</div>
+        </div>
+        <span className="bg-card shadow-ring text-foreground/75 rounded-full px-2.5 py-1 text-xs font-medium">
+          {METHOD_LABEL[v.method]} · {TRANSFER_ETA_SHORT[v.method]}
+        </span>
+      </div>
+      <ReviewList rows={rows} onEdit={onEdit} error={error} fallback="The transfer could not be sent." />
+    </div>
+  )
 }

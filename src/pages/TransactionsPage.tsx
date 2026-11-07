@@ -51,8 +51,8 @@ export function TransactionsPage() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
-          <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-          <Input aria-label="Search transactions" placeholder="Search counterparty or memo" className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input aria-label="Search transactions" placeholder="Search counterparty or memo" className="h-9 pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <NativeSelect aria-label="Account" value={query.accountId ?? ''} onChange={(e) => setFilter('accountId', e.target.value || undefined)}>
           <option value="">All accounts</option>
@@ -77,7 +77,7 @@ export function TransactionsPage() {
         )}
       </div>
 
-      <Card className="gap-0 py-0">
+      <Card className="gap-0 overflow-hidden py-0">
         {transactions.isError ? (
           <ErrorState error={transactions.error} onRetry={() => transactions.refetch()} />
         ) : transactions.isPending || accounts.isPending ? (
@@ -89,7 +89,7 @@ export function TransactionsPage() {
             <TransactionsTable rows={transactions.data.items} accounts={accounts.data ?? []} selectedId={selectedId} onSelect={setSelectedId} />
           </div>
         )}
-        <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
+        <div className="border-hairline flex items-center justify-between border-t px-5 py-3 text-[13px]">
           <span className="text-muted-foreground">Page {page} of {pageCount}</span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setFilter('page', String(page - 1))}><ChevronLeft /> Prev</Button>

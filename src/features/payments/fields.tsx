@@ -11,9 +11,15 @@ import { cn } from '@/lib/utils'
 
 export function RadioCard({ children, ...input }: React.ComponentProps<'input'> & { children: React.ReactNode }) {
   return (
-    <label className="hover:bg-accent/50 has-[input:checked]:border-primary has-[input:checked]:bg-accent has-[input:focus-visible]:ring-ring/50 flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-3 text-sm transition-colors has-[input:focus-visible]:ring-[3px]">
+    <label className="group/radio bg-card shadow-control hover:bg-surface-muted has-[input:checked]:bg-primary/5 flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3.5 text-sm transition-[background-color,box-shadow] has-[input:checked]:shadow-[0_0_0_1.5px_var(--primary)] has-[input:focus-visible]:shadow-[0_0_0_1.5px_var(--primary),0_0_0_5px_color-mix(in_oklch,var(--ring)_15%,transparent)]">
       <input type="radio" className="sr-only" {...input} />
-      {children}
+      <span
+        aria-hidden
+        className="grid size-4 shrink-0 place-items-center rounded-full shadow-[inset_0_0_0_1.5px_var(--border)] group-has-[input:checked]/radio:shadow-[inset_0_0_0_1.5px_var(--primary)]"
+      >
+        <span className="group-has-[input:checked]/radio:bg-primary size-2 rounded-full" />
+      </span>
+      <span className="flex min-w-0 flex-1 items-center justify-between gap-4">{children}</span>
     </label>
   )
 }
@@ -72,7 +78,7 @@ export function AmountInput({
   const [text, setText] = useState(() => (Number.isFinite(value) ? centsToInput(value) : ''))
   return (
     <div className="relative">
-      <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">$</span>
+      <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[26px] font-medium">$</span>
       <Input
         id={id}
         ref={ref}
@@ -80,7 +86,7 @@ export function AmountInput({
         inputMode="decimal"
         autoComplete="off"
         placeholder="0.00"
-        className="tabular pl-7"
+        className="tabular h-14 rounded-xl pl-[38px] text-[26px] font-semibold tracking-[-0.02em] placeholder:font-medium"
         value={text}
         aria-invalid={invalid}
         aria-describedby={invalid ? errorId : helpId}
@@ -109,8 +115,8 @@ export function AmountField<T extends FieldValues, TOut>({
   const errorId = `${id}-error`
   const helpId = help ? `${id}-help` : undefined
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium">
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-[13px] font-medium">
         Amount
       </label>
       <Controller
@@ -157,12 +163,12 @@ export function MemoField({
   error?: string
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
-        <label htmlFor={id} className="text-sm font-medium">
+        <label htmlFor={id} className="text-[13px] font-medium">
           Memo <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
-        <span className="tabular text-muted-foreground text-xs">
+        <span className="tabular text-muted-foreground/80 text-xs">
           {length}/{MEMO_MAX}
         </span>
       </div>
@@ -194,14 +200,14 @@ export function ReviewList({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <dl className="divide-y rounded-lg border text-sm">
+      <dl className="shadow-ring divide-hairline divide-y rounded-xl text-sm">
         {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-4 px-3 py-2.5">
+          <div key={r.label} className="flex items-center justify-between gap-4 px-4 py-[11px]">
             <dt className="text-muted-foreground shrink-0">{r.label}</dt>
-            <dd className={`flex min-w-0 items-center gap-2 text-right ${r.strong ? 'font-semibold' : ''}`}>
+            <dd className={`tabular flex min-w-0 items-center gap-2.5 text-right ${r.strong ? 'font-semibold' : ''}`}>
               <span className="truncate">{r.value}</span>
               {r.step !== undefined && (
-                <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={() => onEdit(r.step!)} aria-label={`Edit ${r.label.toLowerCase()}`}>
+                <Button type="button" variant="link" size="sm" className="h-auto px-0 text-[13px]" onClick={() => onEdit(r.step!)} aria-label={`Edit ${r.label.toLowerCase()}`}>
                   Edit
                 </Button>
               )}
@@ -210,7 +216,7 @@ export function ReviewList({
         ))}
       </dl>
       {error && (
-        <p role="alert" className="border-destructive/40 bg-destructive/5 text-destructive rounded-lg border p-3 text-sm">
+        <p role="alert" className="border-destructive/40 bg-destructive/5 text-destructive rounded-xl border p-3 text-sm">
           {error.message || fallback} Please try again.
         </p>
       )}

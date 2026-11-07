@@ -50,8 +50,8 @@ export function PayerStep({ form, customers }: StepProps) {
   return (
     <div className="flex flex-col gap-5">
       {customers.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h3 id="saved-payers" className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+        <div className="flex flex-col gap-2.5">
+          <h3 id="saved-payers" className="text-muted-foreground text-xs font-medium tracking-[0.04em] uppercase">
             Saved customers
           </h3>
           <ul aria-labelledby="saved-payers" className="flex flex-wrap gap-1.5">
@@ -59,7 +59,15 @@ export function PayerStep({ form, customers }: StepProps) {
               const active = c.name === name && c.email === email
               return (
                 <li key={c.id}>
-                  <Button type="button" size="sm" variant={active ? 'default' : 'outline'} aria-pressed={active} onClick={() => pick(c)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={active ? 'default' : 'outline'}
+                    className="h-[30px] rounded-full px-3 text-[13px] shadow-none data-[active=false]:shadow-control"
+                    data-active={active}
+                    aria-pressed={active}
+                    onClick={() => pick(c)}
+                  >
                     {c.name}
                   </Button>
                 </li>
@@ -69,8 +77,8 @@ export function PayerStep({ form, customers }: StepProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="payer-name" className="text-sm font-medium">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="payer-name" className="text-[13px] font-medium">
           Payer name
         </label>
         <Input
@@ -83,8 +91,8 @@ export function PayerStep({ form, customers }: StepProps) {
         />
         <FieldError id="payer-name-error" message={formState.errors.payerName?.message} />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="payer-email" className="text-sm font-medium">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="payer-email" className="text-[13px] font-medium">
           Email
         </label>
         <Input
@@ -124,8 +132,8 @@ export function DetailsStep({ form }: StepProps) {
         ))}
       </fieldset>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="request-due" className="text-sm font-medium">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="request-due" className="text-[13px] font-medium">
           Due date
         </label>
         <Input

@@ -21,7 +21,7 @@ export function PaymentsPage() {
   return (
     <>
       <PageHeader title="Send money" description="Pay a recipient or move money between your accounts." />
-      <Card className="max-w-xl">
+      <Card className="max-w-[600px]">
         <CardContent>{body}</CardContent>
       </Card>
     </>

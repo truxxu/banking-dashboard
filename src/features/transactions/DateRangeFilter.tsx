@@ -65,7 +65,7 @@ export function DateRangeFilter({ from, to, onChange }: Range & { onChange: (fro
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" aria-label="Date range" className={cn('font-normal', !active && 'text-muted-foreground')}>
+        <Button variant="outline" aria-label="Date range" className={cn('h-9 px-3 font-normal', !active && 'text-muted-foreground')}>
           <CalendarDays />
           {label(fromDate, toDate)}
         </Button>

@@ -87,10 +87,10 @@ export function RequestFlow({ accounts, customers }: { accounts: Account[]; cust
     >
       <Stepper steps={STEPS.map((s) => s.label)} current={step} label="Request progress" />
       <div>
-        <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold outline-none">
+        <h2 ref={headingRef} tabIndex={-1} className="text-[19px] leading-[26px] font-semibold tracking-[-0.02em] outline-none">
           {title}
         </h2>
-        <p className="text-muted-foreground text-sm">{description}</p>
+        <p className="text-muted-foreground mt-0.5 text-sm">{description}</p>
       </div>
 
       {step === 0 && <DepositStep {...props} />}
@@ -98,7 +98,7 @@ export function RequestFlow({ accounts, customers }: { accounts: Account[]; cust
       {step === 2 && <DetailsStep {...props} />}
       {step === 3 && <ReviewStep {...props} onEdit={goTo} error={create.error} />}
 
-      <div className="flex justify-between gap-2">
+      <div className="flex justify-between gap-2 pt-1">
         {step > 0 ? (
           <Button type="button" variant="outline" onClick={() => goTo(step - 1)} disabled={create.isPending}>
             Back
@@ -106,7 +106,7 @@ export function RequestFlow({ accounts, customers }: { accounts: Account[]; cust
         ) : (
           <span />
         )}
-        <Button type="submit" disabled={create.isPending}>
+        <Button type="submit" disabled={create.isPending} className="px-[18px]">
           {step < STEPS.length - 1
             ? 'Continue'
             : create.isPending

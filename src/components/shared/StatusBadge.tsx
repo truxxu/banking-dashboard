@@ -1,9 +1,13 @@
 import { STATUS_LABEL } from '@/api/schemas'
 import type { TransactionStatus } from '@/api/types'
-import { Badge } from '@/components/ui/badge'
+import { StatusDot, type StatusTone } from './StatusDot'
 
-const VARIANT = { pending: 'warning', posted: 'secondary', failed: 'destructive' } as const
+const STATUS_TONE: Record<TransactionStatus, StatusTone> = { pending: 'warning', posted: 'neutral', failed: 'destructive' }
 
-export function StatusBadge({ status }: { status: TransactionStatus }) {
-  return <Badge variant={VARIANT[status]}>{STATUS_LABEL[status]}</Badge>
+export function StatusBadge({ status, className }: { status: TransactionStatus; className?: string }) {
+  return (
+    <StatusDot tone={STATUS_TONE[status]} className={className}>
+      {STATUS_LABEL[status]}
+    </StatusDot>
+  )
 }
