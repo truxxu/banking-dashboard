@@ -32,3 +32,9 @@ export function formatDayKey(key: string) {
   const d = parseDayKey(key)
   return d ? dateFmt.format(d) : key
 }
+
+/** Short ("Nov 6") form of `formatDayKey`. */
+export function formatShortDayKey(key: string) {
+  const d = parseDayKey(key)
+  return d ? shortFmt.format(d) : key
+}

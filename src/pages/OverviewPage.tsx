@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { CategoryFlowCard } from '@/features/overview/CategoryFlowCard'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatShortDate } from '@/lib/date'
+import { formatShortDate, formatShortDayKey } from '@/lib/date'
 import { formatMoney, formatMoneyCompact } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
@@ -87,11 +87,11 @@ export function OverviewPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="date" tickFormatter={formatShortDate} tickLine={false} axisLine={false} minTickGap={40} fontSize={12} stroke="var(--muted-foreground)" />
+                  <XAxis dataKey="date" tickFormatter={formatShortDayKey} tickLine={false} axisLine={false} minTickGap={40} fontSize={12} stroke="var(--muted-foreground)" />
                   <YAxis tickFormatter={(v: number) => formatMoneyCompact(v)} tickLine={false} axisLine={false} width={64} fontSize={12} stroke="var(--muted-foreground)" domain={['auto', 'auto']} />
                   <Tooltip
                     formatter={(v) => [formatMoney(Number(v)), 'Balance']}
-                    labelFormatter={(l) => formatShortDate(String(l))}
+                    labelFormatter={(l) => formatShortDayKey(String(l))}
                     contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
                   />
                   <Area type="monotone" dataKey="balanceCents" stroke="var(--chart-1)" strokeWidth={2} fill="url(#balanceFill)" />

@@ -56,14 +56,15 @@ const dayKeyParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().catch(und
 export const transactionQuerySchema = z.object({
   q: z.string().optional(),
   accountId: z.string().optional(),
-  category: z.enum(CATEGORIES).optional(),
-  status: z.enum(['pending', 'posted', 'failed']).optional(),
-  direction: z.enum(['in', 'out']).optional(),
-  /** YYYY-MM-DD, inclusive. Malformed values are dropped rather than failing the whole query. */
+  // Malformed values are dropped (.catch) rather than failing the whole query.
+  category: z.enum(CATEGORIES).optional().catch(undefined),
+  status: z.enum(['pending', 'posted', 'failed']).optional().catch(undefined),
+  direction: z.enum(['in', 'out']).optional().catch(undefined),
+  /** YYYY-MM-DD, inclusive. */
   from: dayKeyParam,
   to: dayKeyParam,
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  page: z.coerce.number().int().min(1).default(1).catch(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25).catch(25),
 })
 
 /** Client-side query shape: every field optional, page/pageSize as numbers. */

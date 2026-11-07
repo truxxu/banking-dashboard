@@ -1,7 +1,8 @@
 import { delay, http, HttpResponse } from 'msw'
 import { paymentRequestSchema, REQUEST_PAY_MS, SETTLE_MS, transactionQuerySchema, transferRequestSchema, TRANSFER_FEES } from '@/api/schemas'
 import type { ApiError, CashFlowPoint, Category, Paginated, PaymentRequest, Summary, Transaction } from '@/api/types'
-import { DAY_MS, dayKey } from '@/lib/date'
+import { dayKey } from '@/lib/date'
+import { formatMoney } from '@/lib/money'
 import { getDb, resetDb, updateDb } from './db'
 import type { Database } from './seed'
 
@@ -113,13 +114,15 @@ export const handlers = [
     const toAccount = req.toAccountId ? db.accounts.find((a) => a.id === req.toAccountId) : undefined
     const recipient = req.recipientId ? db.recipients.find((r) => r.id === req.recipientId) : undefined
     if (!toAccount && !recipient) return error(404, 'not_found', 'Destination not found')
-    if (recipient && req.method === 'transfer') return error(400, 'invalid_method', 'Use ACH or wire for external recipients')
+    if (recipient && !recipient.methods.includes(req.method as (typeof recipient.methods)[number])) {
+      return error(400, 'invalid_method', `${recipient.name} doesn't accept ${req.method === 'transfer' ? 'internal transfer' : req.method.toUpperCase()} payments`)
+    }
     if (toAccount && req.method !== 'transfer') return error(400, 'invalid_method', 'Internal transfers use the "transfer" method')
 
     const fee = TRANSFER_FEES[req.method]
     const available = from.balanceCents - from.pendingCents
     if (req.amountCents + fee > available) {
-      return error(422, 'insufficient_funds', `Insufficient funds in ${from.name}. Available: $${(available / 100).toFixed(2)}`)
+      return error(422, 'insufficient_funds', `Insufficient funds in ${from.name}. Available: ${formatMoney(available)}`)
     }
 
     const now = new Date().toISOString()
@@ -140,7 +143,7 @@ export const handlers = [
     updateDb((draft) => {
       draft.transactions.unshift(outgoing)
       const src = draft.accounts.find((a) => a.id === from.id)!
-      src.pendingCents += req.amountCents
+      src.pendingCents += req.amountCents + fee // hold the fee too, so available() isn't overstated
       // The "bank" settles it a few seconds later (see processScheduled).
       draft.scheduled.push({ kind: 'transfer', txId: id, amountCents: req.amountCents, feeCents: fee, toAccountId: toAccount?.id, settleAt: Date.now() + SETTLE_MS })
     })
@@ -248,7 +251,7 @@ function settleTransfer(db: Database, id: string, amountCents: number, feeCents:
   tx.timeline.push({ status: 'posted', at: postedAt })
 
   const src = db.accounts.find((a) => a.id === tx.accountId)!
-  src.pendingCents -= amountCents
+  src.pendingCents -= amountCents + feeCents
   src.balanceCents -= amountCents + feeCents
 
   if (feeCents > 0) {
@@ -272,8 +275,11 @@ function settleTransfer(db: Database, id: string, amountCents: number, feeCents:
 
 function buildSummary(periodDays: number): Summary {
   const { accounts, transactions } = getDb()
-  const now = Date.now()
-  const since = now - periodDays * DAY_MS
+  // Calendar days (not fixed 24h steps) so DST changes never skip or repeat a day.
+  const today = new Date()
+  const dayOffset = (i: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - i)
+  // Start of the first series day, so totals cover exactly the days the series (and its links) show.
+  const since = dayOffset(periodDays).getTime()
   const posted = transactions.filter((t) => t.status === 'posted')
   // Internal transfers move money between your own accounts — exclude them from in/out totals.
   const external = posted.filter((t) => t.category !== 'Transfer')
@@ -309,7 +315,7 @@ function buildSummary(periodDays: number): Summary {
   }
   let running = totalCashCents
   for (let i = 0; i <= periodDays; i++) {
-    const k = dayKey(new Date(now - i * DAY_MS))
+    const k = dayKey(dayOffset(i))
     balanceSeries.push({ date: k, balanceCents: running })
     cashFlowSeries.push({ date: k, ...(flowByDay.get(k) ?? emptyFlow()) })
     running -= netByDay.get(k) ?? 0

@@ -66,8 +66,8 @@ export function useTransactionFilters() {
     [setParams],
   )
 
-  // from/to count as a single "date" filter.
-  const activeCount = FILTER_KEYS.filter((k) => k !== 'to' && (params.get(k) || (k === 'from' && params.get('to')))).length
+  // Count only filters that survived parsing; from/to count as a single "date" filter.
+  const activeCount = FILTER_KEYS.filter((k) => k !== 'to' && (query[k] || (k === 'from' && query.to))).length
 
   return { query, setFilter, setDateRange, clearFilters, activeCount, selectedId, setSelectedId }
 }

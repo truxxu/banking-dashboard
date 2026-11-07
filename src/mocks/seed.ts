@@ -23,7 +23,7 @@ export type ScheduledJob =
   | { kind: 'deposit'; txId: string; settleAt: number }
 
 /** Bump when the seed shape changes so stale localStorage data is discarded. */
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 const SEED = 20261106
 const MONTHS = 12
 
@@ -152,11 +152,17 @@ export function createSeedDatabase(now = new Date()): Database {
     }
   }
 
-  // Anything in the last 2 days that is still "settling" becomes pending.
+  // Anything in the last 2 days that is still "settling" becomes pending, with a job that posts it
+  // 2 days after its date. Internal transfers stay posted so both legs always agree.
+  const scheduled: ScheduledJob[] = []
   for (const tx of txs) {
-    if (now.getTime() - new Date(tx.date).getTime() < 2 * DAY_MS && tx.status === 'posted' && faker.datatype.boolean(0.5)) {
+    if (now.getTime() - new Date(tx.date).getTime() < 2 * DAY_MS && tx.status === 'posted' && tx.category !== 'Transfer' && faker.datatype.boolean(0.5)) {
       tx.status = 'pending'
       tx.timeline = tx.timeline.slice(0, 1).concat({ status: 'pending', at: tx.date })
+      const settleAt = new Date(tx.date).getTime() + 2 * DAY_MS
+      scheduled.push(tx.amountCents < 0
+        ? { kind: 'transfer', txId: tx.id, amountCents: -tx.amountCents, feeCents: 0, settleAt }
+        : { kind: 'deposit', txId: tx.id, settleAt })
     }
   }
 
@@ -204,5 +210,5 @@ export function createSeedDatabase(now = new Date()): Database {
   })
   const requests = [...open, ...paid].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
-  return { version: DB_VERSION, accounts, transactions: txs, recipients, customers, requests, scheduled: [] }
+  return { version: DB_VERSION, accounts, transactions: txs, recipients, customers, requests, scheduled }
 }

@@ -88,8 +88,13 @@ export function useCreatePaymentRequest() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.paymentRequests })
       // The mock customer pays (open → paid, pending deposit), then the deposit posts.
-      setTimeout(() => void refresh(), REQUEST_PAY_MS + 500)
-      setTimeout(() => void refresh(), REQUEST_PAY_MS + SETTLE_MS + 500)
+      // Chained, not two fixed timers: the deposit's settleAt is set while the first refresh is
+      // being served (after its own latency), so the second waits SETTLE_MS from that point.
+      setTimeout(() => {
+        void refresh()
+          .catch(() => {})
+          .then(() => setTimeout(() => void refresh(), SETTLE_MS + 500))
+      }, REQUEST_PAY_MS + 500)
     },
   })
 }

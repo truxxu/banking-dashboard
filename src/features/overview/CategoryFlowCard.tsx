@@ -66,7 +66,7 @@ export function CategoryFlowCard({ direction, summary }: Props) {
                 <li key={r.label}>
                   {r.category ? (
                     <Link
-                      to={`/transactions?${new URLSearchParams({ category: r.category, direction, ...(from && { from }), ...(to && { to }) })}`}
+                      to={`/transactions?${new URLSearchParams({ category: r.category, direction, status: 'posted', ...(from && { from }), ...(to && { to }) })}`}
                       aria-label={`${r.label}: ${formatMoney(r.totalCents)} — view transactions`}
                       className={`${cls} hover:bg-muted/50 focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]`}
                     >

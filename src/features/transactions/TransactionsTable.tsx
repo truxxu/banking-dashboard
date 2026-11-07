@@ -2,11 +2,10 @@ import { createColumnHelper, tableFeatures, useTable } from '@tanstack/react-tab
 import type { Account, Transaction } from '@/api/types'
 import { Amount } from '@/components/shared/Amount'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { METHOD_LABEL } from '@/features/payments/transfer'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/date'
 import { cn } from '@/lib/utils'
-
-const METHOD_LABEL = { ach: 'ACH', wire: 'Wire', card: 'Card', transfer: 'Transfer' } as const
 
 // TanStack Table v9: features and columns are defined at module scope (stable references).
 // Filtering/pagination happen on the "server" (MSW), so only the core row model is needed.
