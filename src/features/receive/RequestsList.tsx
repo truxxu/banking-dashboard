@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { FieldError } from '@/features/payments/fields'
+import { transactionsHref } from '@/features/transactions/useTransactionFilters'
+import { accountLabelById } from '@/lib/account'
 import { formatDayKey } from '@/lib/date'
 import { formatMoney } from '@/lib/money'
 import { RequestStatusBadge } from './RequestStatusBadge'
@@ -13,10 +16,6 @@ import { RequestStatusBadge } from './RequestStatusBadge'
 export function RequestsList({ accounts }: { accounts: Account[] }) {
   const requests = usePaymentRequests()
   const cancel = useCancelPaymentRequest()
-  const accountName = (id: string) => {
-    const a = accounts.find((x) => x.id === id)
-    return a ? `${a.name} ••${a.mask}` : '—'
-  }
 
   return (
     <Card>
@@ -35,11 +34,7 @@ export function RequestsList({ accounts }: { accounts: Account[] }) {
           <EmptyState title="No payment requests yet" description="Requests you send will show up here." />
         ) : (
           <>
-            {cancel.isError && (
-              <p role="alert" className="text-destructive mb-3 text-sm">
-                {cancel.error.message || 'The request could not be cancelled.'}
-              </p>
-            )}
+            {cancel.isError && <FieldError className="mb-3" message={cancel.error.message || 'The request could not be cancelled.'} />}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -64,7 +59,7 @@ export function RequestsList({ accounts }: { accounts: Account[] }) {
                       </TableCell>
                       <TableCell className="tabular text-right font-medium">{formatMoney(r.amountCents)}</TableCell>
                       <TableCell className="whitespace-nowrap">{formatDayKey(r.dueDate)}</TableCell>
-                      <TableCell className="text-muted-foreground max-md:hidden">{accountName(r.toAccountId)}</TableCell>
+                      <TableCell className="text-muted-foreground max-md:hidden">{accountLabelById(accounts, r.toAccountId)}</TableCell>
                       <TableCell>
                         <RequestStatusBadge request={r} />
                       </TableCell>
@@ -82,7 +77,7 @@ export function RequestsList({ accounts }: { accounts: Account[] }) {
                         )}
                         {r.transactionId && (
                           <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/transactions?tx=${r.transactionId}`} aria-label={`View payment from ${r.payerName}`}>
+                            <Link to={transactionsHref({ tx: r.transactionId })} aria-label={`View payment from ${r.payerName}`}>
                               View
                             </Link>
                           </Button>

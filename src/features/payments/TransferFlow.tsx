@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { useForm, useWatch, type FieldErrors } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { qk, useCreateTransfer } from '@/api/queries'
-import { TRANSFER_FEES, transferRequestSchema, type TransferRequest } from '@/api/schemas'
+import { available, totalDebit, TRANSFER_FEES, transferRequestSchema, type TransferRequest } from '@/api/schemas'
 import type { Account, Recipient, Transaction } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { formatMoney } from '@/lib/money'
 import { AmountStep, FromStep, ReviewStep, ToStep, type TransferForm } from './steps'
-import { available } from './transfer'
 import { Stepper } from './Stepper'
 import { TransferSuccess } from './TransferSuccess'
+import { stepForErrors, useStepFlow } from './useStepFlow'
 
 const STEPS = [
   { label: 'From', title: 'Send from', description: 'Choose the account the money leaves.' },
@@ -28,12 +28,8 @@ const DEFAULTS: TransferRequest = {
   memo: '',
 }
 
-/** Which step owns each field, for jumping back when final validation fails. */
-function stepForErrors(errors: FieldErrors<TransferRequest>) {
-  if (errors.fromAccountId) return 0
-  if (errors.recipientId || errors.toAccountId) return 1
-  return 2
-}
+/** Fields each step edits (Review edits none). */
+const STEP_FIELDS = [['fromAccountId'], ['recipientId', 'toAccountId'], ['amountCents', 'method', 'memo']] as const
 
 export function TransferFlow({ accounts, recipients }: { accounts: Account[]; recipients: Recipient[] }) {
   const form: TransferForm = useForm({
@@ -43,38 +39,24 @@ export function TransferFlow({ accounts, recipients }: { accounts: Account[]; re
   })
   const transfer = useCreateTransfer()
   const qc = useQueryClient()
-  const [step, setStep] = useState(0)
+  const { step, goTo, headingRef, focusHeading } = useStepFlow({ onStepChange: transfer.reset })
   const [created, setCreated] = useState<Transaction | null>(null)
   const [amountCents, method] = useWatch({ control: form.control, name: ['amountCents', 'method'] })
 
-  // Move focus to the new heading after user-driven step changes (not on first mount).
-  const headingRef = useRef<HTMLHeadingElement>(null)
-  const focusHeading = useRef(false)
-  useEffect(() => {
-    if (!focusHeading.current) return
-    focusHeading.current = false
-    headingRef.current?.focus()
-  }, [step, created])
-
-  function goTo(n: number) {
-    focusHeading.current = true
-    transfer.reset()
-    setStep(n)
-  }
-
   async function next() {
     if (step === 0) {
-      if (await form.trigger('fromAccountId', { shouldFocus: true })) goTo(1)
+      if (await form.trigger(STEP_FIELDS[0], { shouldFocus: true })) goTo(1)
     } else if (step === 1) {
+      // Checked by hand: zod skips the schema's destination refine while amountCents is still invalid.
       const { recipientId, toAccountId } = form.getValues()
       if (!recipientId && !toAccountId) form.setError('recipientId', { message: 'Choose who to pay' })
       else goTo(2)
     } else if (step === 2) {
-      if (!(await form.trigger(['amountCents', 'memo'], { shouldFocus: true }))) return
+      if (!(await form.trigger([...STEP_FIELDS[2]], { shouldFocus: true }))) return
       const { fromAccountId, amountCents, method } = form.getValues()
       const from = accounts.find((a) => a.id === fromAccountId)!
       const fee = TRANSFER_FEES[method]
-      if (amountCents + fee > available(from)) {
+      if (totalDebit(amountCents, method) > available(from)) {
         form.setError(
           'amountCents',
           {
@@ -88,33 +70,30 @@ export function TransferFlow({ accounts, recipients }: { accounts: Account[]; re
     }
   }
 
-  // Built inside the event handler (not during render) so the ref writes stay out of render.
   function send(e: React.FormEvent<HTMLFormElement>) {
     return form.handleSubmit(
       (values) =>
         transfer.mutate(values, {
           onSuccess: (tx) => {
             qc.setQueryData(qk.transaction(tx.id), tx)
-            focusHeading.current = true
+            focusHeading()
             setCreated(tx)
           },
         }),
-      (errors) => goTo(stepForErrors(errors)),
+      (errors) => goTo(stepForErrors(STEP_FIELDS, errors)),
     )(e)
   }
 
   function startOver() {
     form.reset(DEFAULTS)
-    transfer.reset()
     setCreated(null)
-    focusHeading.current = true
-    setStep(0)
+    goTo(0)
   }
 
   if (created) return <TransferSuccess created={created} onReset={startOver} headingRef={headingRef} />
 
   const { title, description } = STEPS[step]
-  const total = Number.isFinite(amountCents) ? amountCents + TRANSFER_FEES[method] : null
+  const total = Number.isFinite(amountCents) ? totalDebit(amountCents, method) : null
   const props = { form, accounts, recipients }
 
   return (

@@ -1,11 +1,9 @@
-import { Controller, useWatch, type UseFormReturn } from 'react-hook-form'
-import { TRANSFER_ETA, TRANSFER_FEES, type TransferRequest, type TransferRequestOutput } from '@/api/schemas'
+import { useWatch, type UseFormReturn } from 'react-hook-form'
+import { available, METHOD_LABEL, totalDebit, TRANSFER_ETA, TRANSFER_FEES, type TransferRequest, type TransferRequestOutput } from '@/api/schemas'
 import type { Account, Recipient } from '@/api/types'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { accountLabel } from '@/lib/account'
 import { formatMoney } from '@/lib/money'
-import { AmountInput, FieldError, RadioCard } from './fields'
-import { available, METHOD_LABEL } from './transfer'
+import { AccountName, AmountField, FieldError, MemoField, MethodOption, RadioCard, ReviewList, type ReviewRow } from './fields'
 
 export type TransferForm = UseFormReturn<TransferRequest, unknown, TransferRequestOutput>
 interface StepProps {
@@ -27,9 +25,7 @@ export function FromStep({ form, accounts }: StepProps) {
       <legend className="sr-only">Account to send from</legend>
       {accounts.map((a) => (
         <RadioCard key={a.id} {...field} value={a.id}>
-          <span>
-            <span className="font-medium">{a.name}</span> <span className="text-muted-foreground">••{a.mask}</span>
-          </span>
+          <AccountName account={a} />
           <span className="text-right">
             <span className="tabular block">{formatMoney(available(a))}</span>
             <span className="text-muted-foreground text-xs">available</span>
@@ -85,9 +81,7 @@ export function ToStep({ form, accounts, recipients }: StepProps) {
           <legend className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">Your accounts</legend>
           {ownAccounts.map((a) => (
             <RadioCard key={a.id} name="destination" value={`a:${a.id}`} checked={selected === `a:${a.id}`} onChange={() => choose(`a:${a.id}`)}>
-              <span>
-                <span className="font-medium">{a.name}</span> <span className="text-muted-foreground">••{a.mask}</span>
-              </span>
+              <AccountName account={a} />
               <span className="tabular text-muted-foreground text-xs">{formatMoney(a.balanceCents)}</span>
             </RadioCard>
           ))}
@@ -106,44 +100,19 @@ export function AmountStep({ form, accounts, recipients }: StepProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="amount" className="text-sm font-medium">
-          Amount
-        </label>
-        <Controller
-          name="amountCents"
-          control={control}
-          render={({ field, fieldState }) => (
-            <AmountInput
-              id="amount"
-              errorId="amount-error"
-              helpId="amount-help"
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              name={field.name}
-              ref={field.ref}
-              invalid={Boolean(fieldState.error)}
-            />
-          )}
-        />
-        <FieldError id="amount-error" message={formState.errors.amountCents?.message} />
-        {from && (
-          <p id="amount-help" className="text-muted-foreground text-xs">
-            {formatMoney(available(from))} available in {from.name} ••{from.mask}
-          </p>
-        )}
-      </div>
+      <AmountField
+        control={control}
+        name="amountCents"
+        id="amount"
+        help={from && `${formatMoney(available(from))} available in ${accountLabel(from)}`}
+      />
 
       {recipient ? (
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1.5 text-sm font-medium">Method</legend>
           {recipient.methods.map((m) => (
             <RadioCard key={m} {...register('method')} value={m}>
-              <span>
-                <span className="block font-medium">{METHOD_LABEL[m]}</span>
-                <span className="text-muted-foreground text-xs">{TRANSFER_ETA[m]}</span>
-              </span>
+              <MethodOption method={m} />
               <span className="tabular text-muted-foreground text-xs">
                 {TRANSFER_FEES[m] ? `${formatMoney(TRANSFER_FEES[m])} fee` : 'No fee'}
               </span>
@@ -156,16 +125,13 @@ export function AmountStep({ form, accounts, recipients }: StepProps) {
         </p>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline justify-between">
-          <label htmlFor="transfer-memo" className="text-sm font-medium">
-            Memo <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <span className="tabular text-muted-foreground text-xs">{memo?.length ?? 0}/140</span>
-        </div>
-        <Input id="transfer-memo" maxLength={140} placeholder="e.g. Invoice #1042" {...register('memo')} />
-        <FieldError message={formState.errors.memo?.message} />
-      </div>
+      <MemoField
+        id="transfer-memo"
+        placeholder="e.g. Invoice #1042"
+        registration={register('memo')}
+        length={memo?.length ?? 0}
+        error={formState.errors.memo?.message}
+      />
     </div>
   )
 }
@@ -182,13 +148,13 @@ export function ReviewStep({
   const toAccount = accounts.find((a) => a.id === v.toAccountId)
   const recipient = recipients.find((r) => r.id === v.recipientId)
   const fee = TRANSFER_FEES[v.method]
-  const total = v.amountCents + fee
+  const total = totalDebit(v.amountCents, v.method)
 
-  const rows: { label: string; value: React.ReactNode; step?: number; strong?: boolean }[] = [
-    { label: 'From', value: from && `${from.name} ••${from.mask}`, step: 0 },
+  const rows: ReviewRow[] = [
+    { label: 'From', value: from && accountLabel(from), step: 0 },
     {
       label: 'To',
-      value: recipient ? `${recipient.name} · ${recipient.bankName} ••${recipient.mask}` : toAccount && `${toAccount.name} ••${toAccount.mask}`,
+      value: recipient ? `${recipient.name} · ${recipient.bankName} ••${recipient.mask}` : toAccount && accountLabel(toAccount),
       step: 1,
     },
     { label: 'Method', value: `${METHOD_LABEL[v.method]} · ${TRANSFER_ETA[v.method]}`, step: 2 },
@@ -199,28 +165,5 @@ export function ReviewStep({
     ...(from ? [{ label: 'Available after', value: <span className="tabular">{formatMoney(available(from) - total)}</span> }] : []),
   ]
 
-  return (
-    <div className="flex flex-col gap-4">
-      <dl className="divide-y rounded-lg border text-sm">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-4 px-3 py-2.5">
-            <dt className="text-muted-foreground shrink-0">{r.label}</dt>
-            <dd className={`flex min-w-0 items-center gap-2 text-right ${r.strong ? 'font-semibold' : ''}`}>
-              <span className="truncate">{r.value}</span>
-              {r.step !== undefined && (
-                <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={() => onEdit(r.step!)} aria-label={`Edit ${r.label.toLowerCase()}`}>
-                  Edit
-                </Button>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      {error && (
-        <p role="alert" className="border-destructive/40 bg-destructive/5 text-destructive rounded-lg border p-3 text-sm">
-          {error.message || 'The transfer could not be sent.'} Please try again.
-        </p>
-      )}
-    </div>
-  )
+  return <ReviewList rows={rows} onEdit={onEdit} error={error} fallback="The transfer could not be sent." />
 }

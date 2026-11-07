@@ -4,9 +4,9 @@ import type { Account } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { NativeSelect } from '@/components/ui/native-select'
+import { ACCOUNT_TYPE_LABEL, accountLabel } from '@/lib/account'
 
 const BANK_NAME = 'Ledgerly Bank, N.A.'
-const TYPE_LABEL: Record<Account['type'], string> = { checking: 'Checking', savings: 'Savings', treasury: 'Treasury' }
 
 export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
@@ -31,15 +31,16 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
     }
   }
 
-  const rows = [
-    { label: 'Bank', value: BANK_NAME, display: BANK_NAME },
-    { label: 'Routing number', hint: 'ACH and wire', value: account.routingNumber, display: account.routingNumber },
+  const rows: { label: string; value: string; hint?: string; display?: string; revealable?: boolean }[] = [
+    { label: 'Bank', value: BANK_NAME },
+    { label: 'Routing number', hint: 'ACH and wire', value: account.routingNumber },
     {
       label: 'Account number',
       value: account.accountNumber,
-      display: revealed ? account.accountNumber : `••••${account.mask}`,
+      display: revealed ? undefined : `••••${account.mask}`,
+      revealable: true,
     },
-    { label: 'Account type', value: TYPE_LABEL[account.type], display: TYPE_LABEL[account.type] },
+    { label: 'Account type', value: ACCOUNT_TYPE_LABEL[account.type] },
   ]
 
   return (
@@ -63,7 +64,7 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name} ••{a.mask}
+                {accountLabel(a)}
               </option>
             ))}
           </NativeSelect>
@@ -77,8 +78,8 @@ export function AccountDetailsCard({ accounts }: { accounts: Account[] }) {
                 {r.hint && <span className="block text-xs">{r.hint}</span>}
               </dt>
               <dd className="flex min-w-0 items-center gap-1">
-                <span className="tabular truncate font-medium">{r.display}</span>
-                {r.label === 'Account number' && (
+                <span className="tabular truncate font-medium">{r.display ?? r.value}</span>
+                {r.revealable && (
                   <Button
                     type="button"
                     variant="ghost"
