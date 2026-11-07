@@ -40,7 +40,7 @@ export function SuccessPanel({
         </span>
         <span className="text-muted-foreground">{detail}</span>
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
         {txId && (
           <Button asChild variant="outline">
             <Link to={transactionsHref({ tx: txId })}>View transaction</Link>

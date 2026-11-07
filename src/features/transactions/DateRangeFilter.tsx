@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { dayKey, daysAgo, formatDate, formatShortDate, parseDayKey } from '@/lib/date'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 
 type Range = { from?: string; to?: string }
@@ -34,7 +35,8 @@ function label(from?: Date, to?: Date) {
 }
 
 /** Date range filter. Values are inclusive YYYY-MM-DD day keys, matching the URL and API. */
-export function DateRangeFilter({ from, to, onChange }: Range & { onChange: (from?: string, to?: string) => void }) {
+export function DateRangeFilter({ from, to, onChange, className }: Range & { onChange: (from?: string, to?: string) => void; className?: string }) {
+  const wide = useMediaQuery('(min-width: 640px)')
   const [open, setOpen] = useState(false)
   // Captured once per mount so render stays pure; refreshed when the popover opens.
   const [today, setToday] = useState(() => new Date())
@@ -65,12 +67,12 @@ export function DateRangeFilter({ from, to, onChange }: Range & { onChange: (fro
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" aria-label="Date range" className={cn('font-normal', !active && 'text-muted-foreground')}>
+        <Button variant="outline" aria-label="Date range" className={cn('h-9 px-3 font-normal', !active && 'text-muted-foreground', className)}>
           <CalendarDays />
           {label(fromDate, toDate)}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto max-w-[calc(100vw-2rem)] p-0">
+      <PopoverContent align="start" className="max-h-[calc(100svh-6rem)] w-auto max-w-[calc(100vw-2rem)] overflow-y-auto p-0">
         <div className="flex flex-col sm:flex-row">
           <div className="flex flex-wrap gap-1 border-b p-2 sm:w-36 sm:flex-col sm:flex-nowrap sm:border-r sm:border-b-0">
             {presets(today).map((p) => {
@@ -91,8 +93,7 @@ export function DateRangeFilter({ from, to, onChange }: Range & { onChange: (fro
           <div className="flex flex-col">
             <Calendar
               mode="range"
-              numberOfMonths={2}
-              className="[&_.rdp-months]:flex-col sm:[&_.rdp-months]:flex-row"
+              numberOfMonths={wide ? 2 : 1}
               defaultMonth={fromDate ?? daysAgo(30, today)}
               selected={draft}
               disabled={{ after: today }}

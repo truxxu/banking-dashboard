@@ -5,6 +5,11 @@ const dateTimeFmt = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', time
 
 export const formatDate = (d: Date | string) => dateFmt.format(new Date(d))
 export const formatShortDate = (d: Date | string) => shortFmt.format(new Date(d))
+/** "Nov 6" for dates in the current year, "Nov 6, 2025" otherwise. */
+export function formatDateCompact(d: Date | string) {
+  const date = new Date(d)
+  return date.getFullYear() === new Date().getFullYear() ? shortFmt.format(date) : dateFmt.format(date)
+}
 export const formatDateTime = (d: Date | string) => dateTimeFmt.format(new Date(d))
 
 export const DAY_MS = 24 * 60 * 60 * 1000

@@ -5,6 +5,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { qk, useCreateTransfer } from '@/api/queries'
 import { available, totalDebit, TRANSFER_FEES, transferRequestSchema, type TransferRequest } from '@/api/schemas'
 import type { Account, Recipient, Transaction } from '@/api/types'
+import { Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatMoney } from '@/lib/money'
 import { AmountStep, FromStep, ReviewStep, ToStep, type TransferForm } from './steps'
@@ -108,10 +109,10 @@ export function TransferFlow({ accounts, recipients }: { accounts: Account[]; re
     >
       <Stepper steps={STEPS.map((s) => s.label)} current={step} />
       <div>
-        <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold outline-none">
+        <h2 ref={headingRef} tabIndex={-1} className="text-[19px] leading-[26px] font-semibold tracking-[-0.02em] outline-none">
           {title}
         </h2>
-        <p className="text-muted-foreground text-sm">{description}</p>
+        <p className="text-muted-foreground mt-0.5 text-sm">{description}</p>
       </div>
 
       {step === 0 && <FromStep {...props} />}
@@ -119,7 +120,7 @@ export function TransferFlow({ accounts, recipients }: { accounts: Account[]; re
       {step === 2 && <AmountStep {...props} />}
       {step === 3 && <ReviewStep {...props} onEdit={goTo} error={transfer.error} />}
 
-      <div className="flex justify-between gap-2">
+      <div className="flex justify-between gap-2 pt-1">
         {step > 0 ? (
           <Button type="button" variant="outline" onClick={() => goTo(step - 1)} disabled={transfer.isPending}>
             Back
@@ -127,7 +128,8 @@ export function TransferFlow({ accounts, recipients }: { accounts: Account[]; re
         ) : (
           <span />
         )}
-        <Button type="submit" disabled={transfer.isPending}>
+        <Button type="submit" disabled={transfer.isPending} className="px-[18px]">
+          {step === STEPS.length - 1 && <Send className="size-[15px]" aria-hidden />}
           {step < STEPS.length - 1
             ? 'Continue'
             : transfer.isPending

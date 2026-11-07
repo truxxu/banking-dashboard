@@ -12,19 +12,21 @@ import { transactionsHref } from '@/features/transactions/useTransactionFilters'
 import { ACCOUNT_TYPE_LABEL } from '@/lib/account'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatShortDate, formatShortDayKey } from '@/lib/date'
+import { formatDateCompact, formatShortDayKey } from '@/lib/date'
 import { formatMoney, formatMoneyCompact } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
 const PERIODS = [
-  { days: 30, label: '30D' },
-  { days: 90, label: '90D' },
-  { days: 365, label: '12M' },
+  { days: 30, label: '30D', long: '30 days' },
+  { days: 90, label: '90D', long: '90 days' },
+  { days: 365, label: '12M', long: '12 months' },
 ] as const
 
 export function OverviewPage() {
   const [params, setParams] = useSearchParams()
   const days = Number(params.get('period') ?? 30)
+  const period = PERIODS.find((p) => p.days === days)
+  const periodLong = period?.long ?? `${days} days`
   const summary = useSummary(days)
   const accounts = useAccounts()
   const recent = useTransactions({ page: 1, pageSize: 6 })
@@ -49,26 +51,26 @@ export function OverviewPage() {
         <Card><ErrorState error={summary.error} onRetry={() => summary.refetch()} /></Card>
       ) : (
         <Card>
-          <CardHeader>
+          <CardHeader className="max-sm:has-data-[slot=card-action]:grid-cols-1">
             <CardDescription>Total cash</CardDescription>
             {summary.data ? (
-              <CardTitle className="tabular text-3xl font-semibold tracking-tight">{formatMoney(summary.data.totalCashCents)}</CardTitle>
+              <CardTitle className="tabular text-[28px] leading-9 font-semibold tracking-tight sm:text-3xl">{formatMoney(summary.data.totalCashCents)}</CardTitle>
             ) : (
               <Skeleton className="h-9 w-56" />
             )}
             {summary.data && (
               <p className="text-muted-foreground text-sm">
-                <Amount cents={summary.data.cashChangeCents} /> in the last {PERIODS.find((p) => p.days === days)?.label ?? `${days}D`}
+                <Amount cents={summary.data.cashChangeCents} /> in the last {period?.label ?? `${days}D`}
               </p>
             )}
-            <CardAction>
+            <CardAction className="max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-auto max-sm:mt-3 max-sm:justify-self-start">
               <div role="group" aria-label="Period" className="bg-muted flex rounded-md p-0.5">
                 {PERIODS.map((p) => (
                   <button
                     key={p.days}
                     aria-pressed={p.days === days}
                     onClick={() => setParams({ period: String(p.days) }, { replace: true })}
-                    className={cn('rounded px-2.5 py-1 text-xs font-medium', p.days === days ? 'bg-background shadow-xs' : 'text-muted-foreground')}
+                    className={cn('rounded px-2.5 py-1.5 text-xs font-medium sm:py-1', p.days === days ? 'bg-background shadow-xs' : 'text-muted-foreground')}
                   >
                     {p.label}
                   </button>
@@ -76,7 +78,7 @@ export function OverviewPage() {
               </div>
             </CardAction>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-48 sm:h-64">
             {summary.data ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={summary.data.balanceSeries} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
@@ -88,7 +90,7 @@ export function OverviewPage() {
                   </defs>
                   <CartesianGrid vertical={false} stroke="var(--border)" />
                   <XAxis dataKey="date" tickFormatter={formatShortDayKey} tickLine={false} axisLine={false} minTickGap={40} fontSize={12} stroke="var(--muted-foreground)" />
-                  <YAxis tickFormatter={(v: number) => formatMoneyCompact(v)} tickLine={false} axisLine={false} width={64} fontSize={12} stroke="var(--muted-foreground)" domain={['auto', 'auto']} />
+                  <YAxis tickFormatter={(v: number) => formatMoneyCompact(v)} tickLine={false} axisLine={false} width={56} fontSize={12} stroke="var(--muted-foreground)" domain={['auto', 'auto']} />
                   <Tooltip
                     formatter={(v) => [formatMoney(Number(v)), 'Balance']}
                     labelFormatter={(l) => formatShortDayKey(String(l))}
@@ -105,8 +107,8 @@ export function OverviewPage() {
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <CategoryFlowCard direction="in" />
-        <CategoryFlowCard direction="out" />
+        <CategoryFlowCard direction="in" days={days} periodLabel={periodLong} />
+        <CategoryFlowCard direction="out" days={days} periodLabel={periodLong} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
@@ -134,19 +136,17 @@ export function OverviewPage() {
               <Button variant="ghost" size="sm" asChild><Link to="/transactions">View all <ArrowRight /></Link></Button>
             </CardAction>
           </CardHeader>
-          <CardContent className="flex flex-col divide-y">
-            {recent.isError && <ErrorState error={recent.error} onRetry={() => recent.refetch()} />}
-            {recent.isPending && Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="my-2 h-8" />)}
+          <CardContent className="grid grid-cols-[minmax(0,1fr)_auto_auto] divide-y">
+            {recent.isError && <div className="col-span-full"><ErrorState error={recent.error} onRetry={() => recent.refetch()} /></div>}
+            {recent.isPending && Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="col-span-full my-2 h-8" />)}
             {recent.data?.items.map((tx) => (
-              <Link key={tx.id} to={transactionsHref({ tx: tx.id })} className="hover:bg-muted/50 -mx-2 flex items-center justify-between gap-4 rounded-md px-2 py-2.5">
+              <Link key={tx.id} to={transactionsHref({ tx: tx.id })} className="hover:bg-muted/50 col-span-full -mx-2 grid grid-cols-subgrid items-center gap-x-4 rounded-md px-2 py-2.5">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{tx.counterparty}</div>
-                  <div className="text-muted-foreground text-xs">{formatShortDate(tx.date)} · {tx.category}</div>
+                  <div className="text-muted-foreground text-xs">{formatDateCompact(tx.date)} · {tx.category}</div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {tx.status !== 'posted' && <StatusBadge status={tx.status} />}
-                  <Amount cents={tx.amountCents} className="text-sm font-medium" />
-                </div>
+                <div>{tx.status !== 'posted' && <StatusBadge status={tx.status} />}</div>
+                <Amount cents={tx.amountCents} className="text-right text-sm font-medium" />
               </Link>
             ))}
           </CardContent>

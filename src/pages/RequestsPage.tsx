@@ -22,11 +22,13 @@ export function RequestsPage() {
   return (
     <>
       <PageHeader title="Payment requests" description="Ask a customer to pay you, and track what's been paid." />
-      <Card className="max-w-xl">
-        <CardContent>{body}</CardContent>
+      <Card>
+        <CardContent>
+          <div className="mx-auto w-full max-w-[544px]">{body}</div>
+        </CardContent>
       </Card>
       {accounts.data && (
-        <div className="mt-6">
+        <div className="mt-5">
           <RequestsList accounts={accounts.data} />
         </div>
       )}

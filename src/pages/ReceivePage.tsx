@@ -11,7 +11,7 @@ export function ReceivePage() {
   return (
     <>
       <PageHeader title="Receive money" description="Share your account details so customers can pay you by ACH or wire." />
-      <div className="max-w-xl">
+      <div className="mx-auto w-full max-w-[600px]">
         {accounts.data ? (
           <AccountDetailsCard accounts={accounts.data} />
         ) : accounts.isError ? (
