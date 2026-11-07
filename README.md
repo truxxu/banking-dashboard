@@ -73,7 +73,7 @@ Requests have 250–700ms of simulated latency. Internal transfers are left out 
 ## Status
 
 - [x] Overview: total cash, period switcher, balance chart, accounts, recent activity
-- [x] Overview: money in / money out bar charts of totals by category (last 30 days, top 5 + Other; bar → filtered transactions). Replaces the separate Insights page
+- [x] Overview: money in / money out bar charts of totals by category (follows the selected period, top 5 + Other; bar → filtered transactions). Replaces the separate Insights page
 - [x] Transactions: search, filters, pagination, detail panel with timeline + editable memo
 - [x] Transactions: date-range picker (presets + calendar), Sheet drawer
 - [ ] Transactions: CSV export (button is in place, not wired up), receipt download

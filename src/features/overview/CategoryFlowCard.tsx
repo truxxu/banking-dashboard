@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils'
 import { buildCategoryTotals, type FlowDirection } from './categoryTotals'
 
 /**
- * Horizontal bar chart: one bar per category, length = 30-day total, value labeled at the bar end.
- * Always the last 30 days, independent of Overview's period switcher.
+ * Horizontal bar chart: one bar per category, length = total over the selected period, value labeled at the bar end.
+ * Follows Overview's period switcher (shares its `useSummary(days)` query).
  */
-export function CategoryFlowCard({ direction }: { direction: FlowDirection }) {
-  const summary = useSummary(30)
+export function CategoryFlowCard({ direction, days, periodLabel }: { direction: FlowDirection; days: number; periodLabel: string }) {
+  const summary = useSummary(days)
   const title = direction === 'in' ? 'Money in' : 'Money out'
   const series = summary.data?.cashFlowSeries
   const rows = series && buildCategoryTotals(series, direction)
@@ -26,7 +26,7 @@ export function CategoryFlowCard({ direction }: { direction: FlowDirection }) {
   return (
     <Card>
       <CardHeader>
-        <CardDescription>{title} · last 30 days</CardDescription>
+        <CardDescription>{title} · last {periodLabel}</CardDescription>
         {total !== undefined ? (
           <CardTitle className="tabular text-2xl font-semibold tracking-tight">{formatMoney(total)}</CardTitle>
         ) : (
@@ -41,7 +41,7 @@ export function CategoryFlowCard({ direction }: { direction: FlowDirection }) {
             {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-7" />)}
           </div>
         ) : rows.length === 0 ? (
-          <EmptyState title={`No ${title.toLowerCase()}`} description="Nothing posted in the last 30 days." />
+          <EmptyState title={`No ${title.toLowerCase()}`} description={`Nothing posted in the last ${periodLabel}.`} />
         ) : (
           <ul aria-label={`${title} by category`} className="flex flex-col gap-1">
             {rows.map((r) => {

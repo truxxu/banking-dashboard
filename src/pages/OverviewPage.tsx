@@ -17,14 +17,15 @@ import { formatMoney, formatMoneyCompact } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
 const PERIODS = [
-  { days: 30, label: '30D' },
-  { days: 90, label: '90D' },
-  { days: 365, label: '12M' },
+  { days: 30, label: '30D', long: '30 days' },
+  { days: 90, label: '90D', long: '90 days' },
+  { days: 365, label: '12M', long: '12 months' },
 ] as const
 
 export function OverviewPage() {
   const [params, setParams] = useSearchParams()
   const days = Number(params.get('period') ?? 30)
+  const period = PERIODS.find((p) => p.days === days)
   const summary = useSummary(days)
   const accounts = useAccounts()
   const recent = useTransactions({ page: 1, pageSize: 6 })
@@ -58,7 +59,7 @@ export function OverviewPage() {
             )}
             {summary.data && (
               <p className="text-muted-foreground text-sm">
-                <Amount cents={summary.data.cashChangeCents} /> in the last {PERIODS.find((p) => p.days === days)?.label ?? `${days}D`}
+                <Amount cents={summary.data.cashChangeCents} /> in the last {period?.label ?? `${days}D`}
               </p>
             )}
             <CardAction className="max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-auto max-sm:mt-3 max-sm:justify-self-start">
@@ -105,8 +106,8 @@ export function OverviewPage() {
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <CategoryFlowCard direction="in" />
-        <CategoryFlowCard direction="out" />
+        <CategoryFlowCard direction="in" days={days} periodLabel={period?.long ?? `${days} days`} />
+        <CategoryFlowCard direction="out" days={days} periodLabel={period?.long ?? `${days} days`} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
