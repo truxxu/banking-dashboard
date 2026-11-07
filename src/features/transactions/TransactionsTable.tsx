@@ -1,9 +1,11 @@
+import { useMemo } from 'react'
 import { createColumnHelper, tableFeatures, useTable } from '@tanstack/react-table'
+import { METHOD_LABEL } from '@/api/schemas'
 import type { Account, Transaction } from '@/api/types'
 import { Amount } from '@/components/shared/Amount'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { METHOD_LABEL } from '@/features/payments/transfer'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { accountLabel } from '@/lib/account'
 import { formatDate } from '@/lib/date'
 import { cn } from '@/lib/utils'
 
@@ -43,8 +45,10 @@ export function TransactionsTable({
   onSelect: (id: string) => void
   selectedId: string | null
 }) {
-  const byId = new Map(accounts.map((a) => [a.id, `${a.name} ••${a.mask}`]))
-  const data = rows.map((r) => ({ ...r, accountLabel: byId.get(r.accountId) ?? '—' }))
+  const data = useMemo(() => {
+    const byId = new Map(accounts.map((a) => [a.id, accountLabel(a)]))
+    return rows.map((r) => ({ ...r, accountLabel: byId.get(r.accountId) ?? '—' }))
+  }, [rows, accounts])
   const table = useTable({ features, columns, data, getRowId: (r) => r.id })
 
   return (

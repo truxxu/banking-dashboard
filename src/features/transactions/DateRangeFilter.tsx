@@ -24,12 +24,12 @@ function presets(today: Date): { label: string; range: Range }[] {
 
 function label(from?: Date, to?: Date) {
   if (from && to) {
-    if (dayKey(from) === dayKey(to)) return formatDate(from.toISOString())
+    if (dayKey(from) === dayKey(to)) return formatDate(from)
     const sameYear = from.getFullYear() === to.getFullYear()
-    return `${sameYear ? formatShortDate(from.toISOString()) : formatDate(from.toISOString())} – ${formatDate(to.toISOString())}`
+    return `${sameYear ? formatShortDate(from) : formatDate(from)} – ${formatDate(to)}`
   }
-  if (from) return `From ${formatDate(from.toISOString())}`
-  if (to) return `Until ${formatDate(to.toISOString())}`
+  if (from) return `From ${formatDate(from)}`
+  if (to) return `Until ${formatDate(to)}`
   return 'Any date'
 }
 

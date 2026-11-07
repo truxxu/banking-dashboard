@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { Controller, useWatch, type UseFormReturn } from 'react-hook-form'
-import { TRANSFER_ETA, type PaymentRequestInput, type PaymentRequestOutput } from '@/api/schemas'
+import { useWatch, type UseFormReturn } from 'react-hook-form'
+import { METHOD_LABEL, TRANSFER_ETA, type PaymentRequestInput, type PaymentRequestOutput } from '@/api/schemas'
 import type { Account, Customer } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { dayKey, formatDayKey } from '@/lib/date'
+import { ACCOUNT_TYPE_LABEL, accountLabel } from '@/lib/account'
+import { formatDayKey, todayKey } from '@/lib/date'
 import { formatMoney } from '@/lib/money'
-import { AmountInput, FieldError, RadioCard } from '@/features/payments/fields'
-import { METHOD_LABEL } from '@/features/payments/transfer'
+import { AccountName, AmountField, FieldError, MemoField, MethodOption, RadioCard, ReviewList, type ReviewRow } from '@/features/payments/fields'
 
 export type RequestForm = UseFormReturn<PaymentRequestInput, unknown, PaymentRequestOutput>
 interface StepProps {
@@ -26,10 +26,9 @@ export function DepositStep({ form, accounts }: StepProps) {
       <legend className="sr-only">Account to deposit into</legend>
       {accounts.map((a) => (
         <RadioCard key={a.id} {...field} value={a.id}>
-          <span>
-            <span className="font-medium">{a.name}</span> <span className="text-muted-foreground">••{a.mask}</span>
-            <span className="text-muted-foreground block text-xs capitalize">{a.type}</span>
-          </span>
+          <AccountName account={a}>
+            <span className="text-muted-foreground block text-xs">{ACCOUNT_TYPE_LABEL[a.type]}</span>
+          </AccountName>
           <span className="tabular text-muted-foreground text-xs">{formatMoney(a.balanceCents)}</span>
         </RadioCard>
       ))}
@@ -109,41 +108,17 @@ export function PayerStep({ form, customers }: StepProps) {
 export function DetailsStep({ form }: StepProps) {
   const { control, register, formState } = form
   const memo = useWatch({ control, name: 'memo' })
-  const [today] = useState(() => dayKey(new Date()))
+  const [today] = useState(todayKey)
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="request-amount" className="text-sm font-medium">
-          Amount
-        </label>
-        <Controller
-          name="amountCents"
-          control={control}
-          render={({ field, fieldState }) => (
-            <AmountInput
-              id="request-amount"
-              errorId="request-amount-error"
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              name={field.name}
-              ref={field.ref}
-              invalid={Boolean(fieldState.error)}
-            />
-          )}
-        />
-        <FieldError id="request-amount-error" message={formState.errors.amountCents?.message} />
-      </div>
+      <AmountField control={control} name="amountCents" id="request-amount" />
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1.5 text-sm font-medium">How they'll pay</legend>
         {METHODS.map((m) => (
           <RadioCard key={m} {...register('method')} value={m}>
-            <span>
-              <span className="block font-medium">{METHOD_LABEL[m]}</span>
-              <span className="text-muted-foreground text-xs">{TRANSFER_ETA[m]}</span>
-            </span>
+            <MethodOption method={m} />
             <span className="text-muted-foreground text-xs">No fee to receive</span>
           </RadioCard>
         ))}
@@ -165,16 +140,13 @@ export function DetailsStep({ form }: StepProps) {
         <FieldError id="request-due-error" message={formState.errors.dueDate?.message} />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline justify-between">
-          <label htmlFor="request-memo" className="text-sm font-medium">
-            Memo <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <span className="tabular text-muted-foreground text-xs">{memo?.length ?? 0}/140</span>
-        </div>
-        <Input id="request-memo" maxLength={140} placeholder="e.g. Invoice INV-2041" {...register('memo')} />
-        <FieldError message={formState.errors.memo?.message} />
-      </div>
+      <MemoField
+        id="request-memo"
+        placeholder="e.g. Invoice INV-2041"
+        registration={register('memo')}
+        length={memo?.length ?? 0}
+        error={formState.errors.memo?.message}
+      />
     </div>
   )
 }
@@ -188,8 +160,8 @@ export function ReviewStep({
   const v = useWatch({ control: form.control }) as PaymentRequestInput
   const to = accounts.find((a) => a.id === v.toAccountId)
 
-  const rows: { label: string; value: React.ReactNode; step?: number; strong?: boolean }[] = [
-    { label: 'Deposit to', value: to && `${to.name} ••${to.mask}`, step: 0 },
+  const rows: ReviewRow[] = [
+    { label: 'Deposit to', value: to && accountLabel(to), step: 0 },
     { label: 'Payer', value: v.payerName, step: 1 },
     { label: 'Email', value: v.payerEmail, step: 1 },
     { label: 'Amount', value: <span className="tabular">{formatMoney(v.amountCents)}</span>, step: 2, strong: true },
@@ -198,28 +170,5 @@ export function ReviewStep({
     ...(v.memo ? [{ label: 'Memo', value: v.memo, step: 2 }] : []),
   ]
 
-  return (
-    <div className="flex flex-col gap-4">
-      <dl className="divide-y rounded-lg border text-sm">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-4 px-3 py-2.5">
-            <dt className="text-muted-foreground shrink-0">{r.label}</dt>
-            <dd className={`flex min-w-0 items-center gap-2 text-right ${r.strong ? 'font-semibold' : ''}`}>
-              <span className="truncate">{r.value}</span>
-              {r.step !== undefined && (
-                <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={() => onEdit(r.step!)} aria-label={`Edit ${r.label.toLowerCase()}`}>
-                  Edit
-                </Button>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      {error && (
-        <p role="alert" className="border-destructive/40 bg-destructive/5 text-destructive rounded-lg border p-3 text-sm">
-          {error.message || 'The request could not be sent.'} Please try again.
-        </p>
-      )}
-    </div>
-  )
+  return <ReviewList rows={rows} onEdit={onEdit} error={error} fallback="The request could not be sent." />
 }

@@ -1,12 +1,19 @@
 import { z } from 'zod'
-import { dayKey } from '@/lib/date'
-import { CATEGORIES } from './types'
+import { todayKey } from '@/lib/date'
+import type { Cents } from '@/lib/money'
+import { CATEGORIES, TRANSACTION_STATUSES, type Account, type TransactionMethod, type TransactionStatus } from './types'
 
 export const amountCentsSchema = z
   .number({ error: 'Enter a valid amount' })
   .int()
   .positive('Amount must be greater than $0')
   .max(1_000_000_00, 'Amounts over $1,000,000 need to be scheduled with support')
+
+export const MEMO_MAX = 140
+const memoSchema = z.string().max(MEMO_MAX, `Memo must be ${MEMO_MAX} characters or fewer`)
+
+/** PATCH /transactions/:id body. */
+export const updateMemoSchema = z.object({ memo: memoSchema })
 
 /**
  * Shared between the transfer form (client validation) and the MSW handler
@@ -20,7 +27,7 @@ export const transferRequestSchema = z
     toAccountId: z.string().optional(),
     amountCents: amountCentsSchema,
     method: z.enum(['ach', 'wire', 'transfer']),
-    memo: z.string().max(140).default(''),
+    memo: memoSchema.default(''),
   })
   .refine((v) => Boolean(v.recipientId) !== Boolean(v.toAccountId), {
     message: 'Choose exactly one destination',
@@ -44,8 +51,8 @@ export const paymentRequestSchema = z.object({
   dueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a due date')
-    .refine((d) => d >= dayKey(new Date()), "Due date can't be in the past"),
-  memo: z.string().max(140).default(''),
+    .refine((d) => d >= todayKey(), "Due date can't be in the past"),
+  memo: memoSchema.default(''),
 })
 
 export type PaymentRequestInput = z.input<typeof paymentRequestSchema>
@@ -58,7 +65,7 @@ export const transactionQuerySchema = z.object({
   accountId: z.string().optional(),
   // Malformed values are dropped (.catch) rather than failing the whole query.
   category: z.enum(CATEGORIES).optional().catch(undefined),
-  status: z.enum(['pending', 'posted', 'failed']).optional().catch(undefined),
+  status: z.enum(TRANSACTION_STATUSES).optional().catch(undefined),
   direction: z.enum(['in', 'out']).optional().catch(undefined),
   /** YYYY-MM-DD, inclusive. */
   from: dayKeyParam,
@@ -82,6 +89,16 @@ export const TRANSFER_ETA: Record<TransferRequest['method'], string> = {
   wire: 'Same day if sent before 4pm ET',
   transfer: 'Instant',
 }
+
+export const STATUS_LABEL: Record<TransactionStatus, string> = { pending: 'Pending', posted: 'Posted', failed: 'Failed' }
+
+export const METHOD_LABEL: Record<TransactionMethod, string> = { ach: 'ACH', wire: 'Wire', card: 'Card', transfer: 'Internal transfer' }
+
+/** Funds not already held by pending outgoing transfers. */
+export const available = (a: Account): Cents => a.balanceCents - a.pendingCents
+
+/** What a transfer takes out of the source account, fee included. */
+export const totalDebit = (amountCents: Cents, method: TransferRequest['method']): Cents => amountCents + TRANSFER_FEES[method]
 
 /** How long the mock bank keeps a new transfer pending before it posts. */
 export const SETTLE_MS = 6_000

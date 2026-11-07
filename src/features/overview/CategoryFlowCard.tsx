@@ -1,25 +1,22 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import type { UseQueryResult } from '@tanstack/react-query'
-import type { Summary } from '@/api/types'
+import { useSummary } from '@/api/queries'
 import { EmptyState, ErrorState } from '@/components/shared/States'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { transactionsHref } from '@/features/transactions/useTransactionFilters'
 import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { buildCategoryTotals, type FlowDirection } from './categoryTotals'
 
-interface Props {
-  direction: FlowDirection
-  /** Summary for the last 30 days. */
-  summary: UseQueryResult<Summary>
-}
-
-/** Horizontal bar chart: one bar per category, length = 30-day total, value labeled at the bar end. */
-export function CategoryFlowCard({ direction, summary }: Props) {
+/**
+ * Horizontal bar chart: one bar per category, length = 30-day total, value labeled at the bar end.
+ * Always the last 30 days, independent of Overview's period switcher.
+ */
+export function CategoryFlowCard({ direction }: { direction: FlowDirection }) {
+  const summary = useSummary(30)
   const title = direction === 'in' ? 'Money in' : 'Money out'
   const series = summary.data?.cashFlowSeries
-  const rows = useMemo(() => (series ? buildCategoryTotals(series, direction) : undefined), [series, direction])
+  const rows = series && buildCategoryTotals(series, direction)
   const max = rows?.reduce((m, r) => Math.max(m, r.totalCents), 0) ?? 0
 
   const from = series?.[0]?.date
@@ -66,7 +63,7 @@ export function CategoryFlowCard({ direction, summary }: Props) {
                 <li key={r.label}>
                   {r.category ? (
                     <Link
-                      to={`/transactions?${new URLSearchParams({ category: r.category, direction, status: 'posted', ...(from && { from }), ...(to && { to }) })}`}
+                      to={transactionsHref({ category: r.category, direction, status: 'posted', from, to })}
                       aria-label={`${r.label}: ${formatMoney(r.totalCents)} — view transactions`}
                       className={`${cls} hover:bg-muted/50 focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]`}
                     >

@@ -9,6 +9,10 @@ export const qk = {
   recipients: ['recipients'] as const,
   customers: ['customers'] as const,
   paymentRequests: ['payment-requests'] as const,
+  /** Prefixes of the keys below, for invalidating every entry of a kind. */
+  summaryAll: ['summary'] as const,
+  transactionsAll: ['transactions'] as const,
+  transactionAll: ['transaction'] as const,
   summary: (days: number) => ['summary', days] as const,
   transactions: (q: TransactionQuery) => ['transactions', q] as const,
   transaction: (id: string) => ['transaction', id] as const,
@@ -48,9 +52,9 @@ export const useTransaction = (id: string | null) =>
 function invalidateLedger(qc: ReturnType<typeof useQueryClient>) {
   return Promise.all([
     qc.invalidateQueries({ queryKey: qk.accounts }),
-    qc.invalidateQueries({ queryKey: ['summary'] }),
-    qc.invalidateQueries({ queryKey: ['transactions'] }),
-    qc.invalidateQueries({ queryKey: ['transaction'] }),
+    qc.invalidateQueries({ queryKey: qk.summaryAll }),
+    qc.invalidateQueries({ queryKey: qk.transactionsAll }),
+    qc.invalidateQueries({ queryKey: qk.transactionAll }),
   ])
 }
 
@@ -61,7 +65,7 @@ export function useUpdateMemo() {
       api<Transaction>(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify({ memo }) }),
     onSuccess: (tx) => {
       qc.setQueryData(qk.transaction(tx.id), tx)
-      return qc.invalidateQueries({ queryKey: ['transactions'] })
+      return qc.invalidateQueries({ queryKey: qk.transactionsAll })
     },
   })
 }

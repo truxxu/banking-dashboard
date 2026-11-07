@@ -12,7 +12,7 @@ const queryClient = new QueryClient({
 })
 
 // Start the mock API before the first render so no request slips past it.
-// Dynamic import keeps MSW + faker in their own chunk.
+// Dynamic import keeps MSW in its own chunk; faker loads only when the mock DB needs seeding.
 const { startMockApi } = await import('./mocks/browser')
 await startMockApi()
 

@@ -1,43 +1,21 @@
 import { faker } from '@faker-js/faker/locale/en'
-import type { Account, Category, Customer, PaymentRequest, Recipient, Transaction, TransactionMethod } from '@/api/types'
+import type { Account, Customer, PaymentRequest, Recipient, Transaction } from '@/api/types'
 import { DAY_MS, dayKey } from '@/lib/date'
+import { DB_VERSION, type Database, type ScheduledJob } from './types'
 
-export interface Database {
-  version: number
-  accounts: Account[]
-  transactions: Transaction[]
-  recipients: Recipient[]
-  /** Saved payers, for quick-picking on a payment request. */
-  customers: Customer[]
-  requests: PaymentRequest[]
-  /** Work the mock bank does later; processed lazily on the next API request. */
-  scheduled: ScheduledJob[]
-}
-
-export type ScheduledJob =
-  /** An outgoing transfer posts (debits the source, credits an internal destination). */
-  | { kind: 'transfer'; txId: string; amountCents: number; feeCents: number; toAccountId?: string; settleAt: number }
-  /** The payer pays an open payment request, creating a pending incoming transaction. */
-  | { kind: 'request'; requestId: string; settleAt: number }
-  /** A pending incoming transaction posts and credits its account. */
-  | { kind: 'deposit'; txId: string; settleAt: number }
-
-/** Bump when the seed shape changes so stale localStorage data is discarded. */
-export const DB_VERSION = 3
 const SEED = 20261106
 const MONTHS = 12
 
-const VENDORS: Record<Exclude<Category, 'Revenue' | 'Transfer' | 'Interest' | 'Fees'>, { names: string[]; range: [number, number]; method: TransactionMethod }> = {
-  Payroll: { names: ['Gusto Payroll'], range: [0, 0], method: 'ach' },
-  Rent: { names: ['WeWork'], range: [0, 0], method: 'ach' },
-  Software: { names: ['AWS', 'Google Workspace', 'GitHub', 'Figma', 'Linear', 'Notion', 'Vercel', 'Datadog'], range: [40_00, 4_800_00], method: 'card' },
-  Advertising: { names: ['Google Ads', 'Meta Ads', 'LinkedIn Ads'], range: [500_00, 9_000_00], method: 'card' },
-  Travel: { names: ['Delta Air Lines', 'United Airlines', 'Airbnb', 'Uber', 'Marriott'], range: [25_00, 2_400_00], method: 'card' },
-  Meals: { names: ['Sweetgreen', 'DoorDash', 'Blue Bottle Coffee', 'Starbucks'], range: [8_00, 320_00], method: 'card' },
-  Contractors: { names: [], range: [2_000_00, 14_000_00], method: 'ach' },
-  Taxes: { names: ['IRS — EFTPS', 'CA Franchise Tax Board'], range: [3_000_00, 22_000_00], method: 'ach' },
-  Office: { names: ['Amazon Business', 'Staples', 'Apple Store'], range: [30_00, 3_500_00], method: 'card' },
+/** Vendors for the randomly generated spend; payroll, rent and contractors are generated separately. */
+const VENDORS: Record<'Software' | 'Advertising' | 'Travel' | 'Meals' | 'Office' | 'Taxes', { names: string[]; range: [number, number] }> = {
+  Software: { names: ['AWS', 'Google Workspace', 'GitHub', 'Figma', 'Linear', 'Notion', 'Vercel', 'Datadog'], range: [40_00, 4_800_00] },
+  Advertising: { names: ['Google Ads', 'Meta Ads', 'LinkedIn Ads'], range: [500_00, 9_000_00] },
+  Travel: { names: ['Delta Air Lines', 'United Airlines', 'Airbnb', 'Uber', 'Marriott'], range: [25_00, 2_400_00] },
+  Meals: { names: ['Sweetgreen', 'DoorDash', 'Blue Bottle Coffee', 'Starbucks'], range: [8_00, 320_00] },
+  Office: { names: ['Amazon Business', 'Staples', 'Apple Store'], range: [30_00, 3_500_00] },
+  Taxes: { names: ['IRS — EFTPS', 'CA Franchise Tax Board'], range: [3_000_00, 22_000_00] },
 }
+const CONTRACTOR_RANGE: [number, number] = [2_000_00, 14_000_00]
 
 const cents = (min: number, max: number) => faker.number.int({ min, max })
 
@@ -73,7 +51,6 @@ export function createSeedDatabase(now = new Date()): Database {
 
   const customerNames = Array.from({ length: 14 }, () => faker.company.name())
   const contractors = Array.from({ length: 5 }, () => faker.person.fullName())
-  VENDORS.Contractors.names = contractors
   const cardLast4 = ['1029', '5567', '8843']
 
   const txs: Transaction[] = []
@@ -128,13 +105,13 @@ export function createSeedDatabase(now = new Date()): Database {
     // Quarterly estimated taxes
     if (dom === 15 && [0, 3, 5, 8].includes(day.getMonth())) {
       const v = VENDORS.Taxes
-      txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: v.names[0], category: 'Taxes', amountCents: -cents(...v.range), method: v.method }))
+      txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: v.names[0], category: 'Taxes', amountCents: -cents(...v.range), method: 'ach' }))
     }
 
     // Contractors: monthly on the 5th
     if (dom === 5) {
       for (const name of faker.helpers.arrayElements(contractors, { min: 2, max: 4 })) {
-        txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: name, category: 'Contractors', amountCents: -cents(...VENDORS.Contractors.range), method: 'ach', memo: 'Monthly retainer' }))
+        txs.push(makeTx({ accountId: 'acc_operating', date: at(day), counterparty: name, category: 'Contractors', amountCents: -cents(...CONTRACTOR_RANGE), method: 'ach', memo: 'Monthly retainer' }))
       }
     }
 

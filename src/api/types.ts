@@ -18,7 +18,8 @@ export interface Account {
   accountNumber: string
 }
 
-export type TransactionStatus = 'pending' | 'posted' | 'failed'
+export const TRANSACTION_STATUSES = ['pending', 'posted', 'failed'] as const
+export type TransactionStatus = (typeof TRANSACTION_STATUSES)[number]
 export type TransactionMethod = 'ach' | 'wire' | 'card' | 'transfer'
 
 export const CATEGORIES = [
@@ -102,14 +103,11 @@ export interface Paginated<T> {
 export interface CashFlowPoint {
   /** YYYY-MM-DD day key. */
   date: string
-  inCents: Cents
-  outCents: Cents
   inByCategory: Partial<Record<Category, Cents>>
   outByCategory: Partial<Record<Category, Cents>>
 }
 
 export interface Summary {
-  periodDays: number
   totalCashCents: Cents
   /** Change in total cash over the period. */
   cashChangeCents: Cents
@@ -119,7 +117,6 @@ export interface Summary {
   balanceSeries: { date: string; balanceCents: Cents }[]
   /** Daily in/out totals for the period, with per-category breakdowns (positive magnitudes). */
   cashFlowSeries: CashFlowPoint[]
-  spendByCategory: { category: Category; cents: Cents }[]
 }
 
 export interface ApiError {

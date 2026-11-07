@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { useForm, useWatch, type FieldErrors } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { qk, useCreatePaymentRequest } from '@/api/queries'
 import { paymentRequestSchema, type PaymentRequestInput } from '@/api/schemas'
 import type { Account, Customer, PaymentRequest } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Stepper } from '@/features/payments/Stepper'
-import { DAY_MS, dayKey } from '@/lib/date'
+import { stepForErrors, useStepFlow } from '@/features/payments/useStepFlow'
+import { dayKey, daysFromNow } from '@/lib/date'
 import { formatMoney } from '@/lib/money'
 import { DepositStep, DetailsStep, PayerStep, ReviewStep, type RequestForm } from './steps'
 import { RequestSuccess } from './RequestSuccess'
@@ -25,16 +26,12 @@ const defaults = (): PaymentRequestInput => ({
   payerEmail: '',
   amountCents: NaN,
   method: 'ach',
-  dueDate: dayKey(new Date(Date.now() + 14 * DAY_MS)),
+  dueDate: dayKey(daysFromNow(14)),
   memo: '',
 })
 
-/** Which step owns each field, for jumping back when final validation fails. */
-function stepForErrors(errors: FieldErrors<PaymentRequestInput>) {
-  if (errors.toAccountId) return 0
-  if (errors.payerName || errors.payerEmail) return 1
-  return 2
-}
+/** Fields each step edits (Review edits none). */
+const STEP_FIELDS = [['toAccountId'], ['payerName', 'payerEmail'], ['amountCents', 'method', 'dueDate', 'memo']] as const
 
 export function RequestFlow({ accounts, customers }: { accounts: Account[]; customers: Customer[] }) {
   const form: RequestForm = useForm({
@@ -44,53 +41,33 @@ export function RequestFlow({ accounts, customers }: { accounts: Account[]; cust
   })
   const create = useCreatePaymentRequest()
   const qc = useQueryClient()
-  const [step, setStep] = useState(0)
+  const { step, goTo, headingRef, focusHeading } = useStepFlow({ onStepChange: create.reset })
   const [created, setCreated] = useState<PaymentRequest | null>(null)
   const amountCents = useWatch({ control: form.control, name: 'amountCents' })
 
-  // Move focus to the new heading after user-driven step changes (not on first mount).
-  const headingRef = useRef<HTMLHeadingElement>(null)
-  const focusHeading = useRef(false)
-  useEffect(() => {
-    if (!focusHeading.current) return
-    focusHeading.current = false
-    headingRef.current?.focus()
-  }, [step, created])
-
-  function goTo(n: number) {
-    focusHeading.current = true
-    create.reset()
-    setStep(n)
-  }
-
   async function next() {
-    const fields = (
-      [['toAccountId'], ['payerName', 'payerEmail'], ['amountCents', 'method', 'dueDate', 'memo']] as const
-    )[step]
+    const fields = STEP_FIELDS[step]
     if (fields && (await form.trigger([...fields], { shouldFocus: true }))) goTo(step + 1)
   }
 
-  // Built inside the event handler (not during render) so the ref writes stay out of render.
   function send(e: React.FormEvent<HTMLFormElement>) {
     return form.handleSubmit(
       (values) =>
         create.mutate(values, {
           onSuccess: (req) => {
             qc.setQueryData<PaymentRequest[]>(qk.paymentRequests, (old) => (old ? [req, ...old.filter((r) => r.id !== req.id)] : old))
-            focusHeading.current = true
+            focusHeading()
             setCreated(req)
           },
         }),
-      (errors) => goTo(stepForErrors(errors)),
+      (errors) => goTo(stepForErrors(STEP_FIELDS, errors)),
     )(e)
   }
 
   function startOver() {
     form.reset(defaults())
-    create.reset()
     setCreated(null)
-    focusHeading.current = true
-    setStep(0)
+    goTo(0)
   }
 
   if (created) return <RequestSuccess created={created} accounts={accounts} onReset={startOver} headingRef={headingRef} />
