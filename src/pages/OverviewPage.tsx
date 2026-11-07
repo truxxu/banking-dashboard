@@ -135,19 +135,17 @@ export function OverviewPage() {
               <Button variant="ghost" size="sm" asChild><Link to="/transactions">View all <ArrowRight /></Link></Button>
             </CardAction>
           </CardHeader>
-          <CardContent className="flex flex-col divide-y">
-            {recent.isError && <ErrorState error={recent.error} onRetry={() => recent.refetch()} />}
-            {recent.isPending && Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="my-2 h-8" />)}
+          <CardContent className="grid grid-cols-[minmax(0,1fr)_auto_auto] divide-y">
+            {recent.isError && <div className="col-span-full"><ErrorState error={recent.error} onRetry={() => recent.refetch()} /></div>}
+            {recent.isPending && Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="col-span-full my-2 h-8" />)}
             {recent.data?.items.map((tx) => (
-              <Link key={tx.id} to={transactionsHref({ tx: tx.id })} className="hover:bg-muted/50 -mx-2 flex items-center justify-between gap-4 rounded-md px-2 py-2.5">
+              <Link key={tx.id} to={transactionsHref({ tx: tx.id })} className="hover:bg-muted/50 col-span-full -mx-2 grid grid-cols-subgrid items-center gap-x-4 rounded-md px-2 py-2.5">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{tx.counterparty}</div>
                   <div className="text-muted-foreground text-xs">{formatShortDate(tx.date)} · {tx.category}</div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {tx.status !== 'posted' && <StatusBadge status={tx.status} />}
-                  <Amount cents={tx.amountCents} className="text-sm font-medium" />
-                </div>
+                <div>{tx.status !== 'posted' && <StatusBadge status={tx.status} />}</div>
+                <Amount cents={tx.amountCents} className="text-right text-sm font-medium tabular-nums" />
               </Link>
             ))}
           </CardContent>
